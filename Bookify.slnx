@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Presentation/">
+    <Project Path="Bookify.API/Bookify.API.csproj" />
+    <Project Path="Bookify.Client/Bookify.Client.csproj" />
+    <Project Path="Bookify.Web.Shared/Bookify.Web.Shared.csproj" />
+  </Folder>
+  <Project Path="Bookify.AppHost/Bookify.AppHost.csproj" />
+  <Project Path="Bookify.Application/Bookify.Application.csproj" />
+  <Project Path="Bookify.Domain/Bookify.Domain.csproj" />
+  <Project Path="Bookify.Infrastructure/Bookify.Infrastructure.csproj" />
+  <Project Path="Bookify.ServiceDefaults/Bookify.ServiceDefaults.csproj" />
+</Solution>
