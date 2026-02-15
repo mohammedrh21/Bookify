@@ -12,6 +12,7 @@ namespace Bookify.Application.Interfaces.Auth
         Task<ServiceResponse<Guid>> RegisterClientAsync(RegisterClientRequest request);
         Task<ServiceResponse<Guid>> RegisterStaffAsync(RegisterStaffRequest request);
         Task<ServiceResponse<LoginResponse>> LoginAsync(LoginRequest request);
-
+        Task<ServiceResponse<LoginResponse>> RefreshTokenAsync(RefreshTokenRequest request);
+        Task<ServiceResponse<bool>> RevokeTokenAsync(string userId);
     }
 }

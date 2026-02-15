@@ -21,6 +21,7 @@ namespace Bookify.Infrastructure.Services.Auth
         private readonly IClientRepository _clientRepo;
         private readonly IStaffRepository _staffRepo;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
+
         public AuthService(
             UserManager<ApplicationIdentityUser> userManager,
             IClientRepository clientRepo,
@@ -35,7 +36,7 @@ namespace Bookify.Infrastructure.Services.Auth
 
         public async Task<ServiceResponse<Guid>> RegisterClientAsync(RegisterClientRequest request)
         {
-            var identityUser = await CreateIdentityUser(request, "Client");
+            var identityUser = await CreateIdentityUser(request, Roles.Client);
             if (!identityUser.Success)
                 return ServiceResponse<Guid>.Fail(identityUser.Message!);
 
@@ -44,17 +45,20 @@ namespace Bookify.Infrastructure.Services.Auth
                 Id = Guid.NewGuid(),
                 IdentityUserId = identityUser.Data!,
                 FullName = request.FullName,
-                Phone = request.Phone
+                Phone = request.Phone,
+                DateOfBirth = request.DateOfBirth
             };
 
             await _clientRepo.AddAsync(client);
 
-            return ServiceResponse<Guid>.Ok(id: client.Id, message: "Client registered");
+            return ServiceResponse<Guid>.Ok(
+                id: client.Id,
+                message: "Client registered successfully");
         }
 
         public async Task<ServiceResponse<Guid>> RegisterStaffAsync(RegisterStaffRequest request)
         {
-            var identityUser = await CreateIdentityUser(request, "Staff");
+            var identityUser = await CreateIdentityUser(request, Roles.Staff);
             if (!identityUser.Success)
                 return ServiceResponse<Guid>.Fail(identityUser.Message!);
 
@@ -68,39 +72,61 @@ namespace Bookify.Infrastructure.Services.Auth
 
             await _staffRepo.AddAsync(staff);
 
-            return ServiceResponse<Guid>.Ok(id: staff.Id, message: "Staff registered");
+            return ServiceResponse<Guid>.Ok(
+                id: staff.Id,
+                message: "Staff registered successfully");
         }
 
         private async Task<ServiceResponse<string>> CreateIdentityUser(
             RegisterBaseRequest request,
             string role)
         {
+            // Check if user already exists
+            var existingUser = await _userManager.FindByEmailAsync(request.Email);
+            if (existingUser != null)
+            {
+                return ServiceResponse<string>.Fail("A user with this email already exists");
+            }
+
             var user = new ApplicationIdentityUser
             {
                 UserName = request.Email,
                 Email = request.Email,
-                PhoneNumber = request.Phone
+                PhoneNumber = request.Phone,
+                FullName = request.FullName,
+                EmailConfirmed = false // Require email confirmation in production
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
             if (!result.Succeeded)
-                return ServiceResponse<string>.Fail(
-                    string.Join(", ", result.Errors.Select(e => e.Description)));
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return ServiceResponse<string>.Fail(errors);
+            }
 
             await _userManager.AddToRoleAsync(user, role);
 
-            return ServiceResponse<string>.Ok(user.Id);
+            return ServiceResponse<string>.Ok(user.Id, "User created successfully");
         }
 
-    public async Task<ServiceResponse<LoginResponse>> LoginAsync(LoginRequest request)
+        public async Task<ServiceResponse<LoginResponse>> LoginAsync(LoginRequest request)
         {
-            // Find user via Identity (Infrastructure concern)
+            // Find user via Identity
             var identityUser = await _userManager.FindByEmailAsync(request.Email);
             if (identityUser is null)
                 return ServiceResponse<LoginResponse>.Fail("Invalid email or password");
 
+            // Check password
             if (!await _userManager.CheckPasswordAsync(identityUser, request.Password))
                 return ServiceResponse<LoginResponse>.Fail("Invalid email or password");
+
+            // Check if email is confirmed (optional - enable in production)
+            // if (!identityUser.EmailConfirmed)
+            //     return ServiceResponse<LoginResponse>.Fail("Please confirm your email address");
+
+            // Check if user is locked out
+            if (await _userManager.IsLockedOutAsync(identityUser))
+                return ServiceResponse<LoginResponse>.Fail("Account is locked. Please try again later");
 
             // Map IdentityUser → JwtUser
             var jwtUser = new JwtUser
@@ -110,26 +136,100 @@ namespace Bookify.Infrastructure.Services.Auth
                 UserName = identityUser.UserName!
             };
 
+            // Get user roles
             var roles = await _userManager.GetRolesAsync(identityUser);
-            var token = await _jwtTokenGenerator.GenerateTokenAsync(jwtUser, roles);
-            var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
-            var hash = _jwtTokenGenerator.HashToken(refreshToken);
 
-            await _jwtTokenGenerator.AddAsync(new RefreshToken
+            // Generate access token
+            var accessToken = await _jwtTokenGenerator.GenerateTokenAsync(jwtUser, roles);
+
+            // Generate refresh token
+            var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+            var refreshTokenHash = _jwtTokenGenerator.HashToken(refreshToken);
+
+            // Save refresh token to database
+            await _jwtTokenGenerator.SaveRefreshTokenAsync(new RefreshToken
             {
                 Id = Guid.NewGuid(),
-                UserId = user.Id,
-                TokenHash = hash,
+                UserId = identityUser.Id,
+                TokenHash = refreshTokenHash,
                 ExpiresAt = DateTime.UtcNow.AddDays(7),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                IsRevoked = false
             });
-            return ServiceResponse<LoginResponse>.Ok(new LoginResponse
+
+            // Reset access failed count on successful login
+            await _userManager.ResetAccessFailedCountAsync(identityUser);
+
+            return ServiceResponse<LoginResponse>.Ok(
+                new LoginResponse
+                {
+                    Token = accessToken,
+                    RefreshToken = refreshToken,
+                    Expiration = DateTime.UtcNow.AddHours(1),
+                    Role = roles.FirstOrDefault() ?? "User",
+                    UserId = Guid.Parse(identityUser.Id)
+                },
+                "Login successful");
+        }
+
+        public async Task<ServiceResponse<LoginResponse>> RefreshTokenAsync(RefreshTokenRequest request)
+        {
+            var tokenHash = _jwtTokenGenerator.HashToken(request.RefreshToken);
+            var storedToken = await _jwtTokenGenerator.ValidateRefreshTokenAsync(tokenHash);
+
+            if (storedToken == null)
+                return ServiceResponse<LoginResponse>.Fail("Invalid or expired refresh token");
+
+            // Get user
+            var identityUser = await _userManager.FindByIdAsync(storedToken.UserId);
+            if (identityUser == null)
+                return ServiceResponse<LoginResponse>.Fail("User not found");
+
+            // Revoke old refresh token
+            await _jwtTokenGenerator.RevokeTokenAsync(tokenHash);
+
+            // Generate new tokens
+            var jwtUser = new JwtUser
             {
-                Token = token,
-                Expiration = DateTime.UtcNow.AddHours(1),
-                Role = roles.FirstOrDefault() ?? "User",
-                UserId = Guid.Parse(identityUser.Id)
-            }, "Login successful");
+                Id = identityUser.Id,
+                Email = identityUser.Email!,
+                UserName = identityUser.UserName!
+            };
+
+            var roles = await _userManager.GetRolesAsync(identityUser);
+            var newAccessToken = await _jwtTokenGenerator.GenerateTokenAsync(jwtUser, roles);
+            var newRefreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+            var newRefreshTokenHash = _jwtTokenGenerator.HashToken(newRefreshToken);
+
+            // Save new refresh token
+            await _jwtTokenGenerator.SaveRefreshTokenAsync(new RefreshToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = identityUser.Id,
+                TokenHash = newRefreshTokenHash,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow,
+                IsRevoked = false,
+                ReplacedByTokenHash = newRefreshTokenHash
+            });
+
+            return ServiceResponse<LoginResponse>.Ok(
+                new LoginResponse
+                {
+                    Token = newAccessToken,
+                    RefreshToken = newRefreshToken,
+                    Expiration = DateTime.UtcNow.AddHours(1),
+                    Role = roles.FirstOrDefault() ?? "User",
+                    UserId = Guid.Parse(identityUser.Id)
+                },
+                "Token refreshed successfully");
+        }
+
+        public async Task<ServiceResponse<bool>> RevokeTokenAsync(string userId)
+        {
+            await _jwtTokenGenerator.RevokeAllUserTokensAsync(userId);
+            return ServiceResponse<bool>.Ok(true, "All tokens revoked successfully");
         }
     }
 }
+

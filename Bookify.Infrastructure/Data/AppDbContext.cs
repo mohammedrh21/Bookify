@@ -25,6 +25,15 @@ namespace Bookify.Infrastructure.Data
             base.OnModelCreating(builder);
 
             // ================================
+            // Service have convension (price)
+            // ================================
+            builder.Entity<Domain.Entities.Service>(entity =>
+            {
+                entity.Property(s => s.Price)
+                      .HasPrecision(18, 2); // precision 18, scale 2
+            });
+
+            // ================================
             // Client → Booking (One-to-Many)
             // ================================
             builder.Entity<Booking>()

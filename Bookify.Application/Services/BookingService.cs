@@ -14,13 +14,16 @@ namespace Bookify.Application.Services
     {
         private readonly IBookingRepository _bookingRepo;
         private readonly IMapper _mapper;
+        private readonly IAppLogger<BookingService> _logger;
 
         public BookingService(
             IBookingRepository bookingRepo,
-            IMapper mapper)
+            IMapper mapper,
+            IAppLogger<BookingService> logger)
         {
             _bookingRepo = bookingRepo;
             _mapper = mapper;
+            _logger = logger;
         }
 
         // =============================
@@ -29,86 +32,153 @@ namespace Bookify.Application.Services
 
         public async Task<ServiceResponse<Guid>> CreateAsync(CreateBookingRequest request)
         {
-            if (BookingRules.IsInFuture(request.Date,request.Time))
-                return ServiceResponse<Guid>.Fail("Booking must be for a future date/time");
-
-            if (await _bookingRepo.ExistsAsync(
-                request.StaffId,
-                request.Date,
-                request.Time))
-                return ServiceResponse<Guid>.Fail("Time slot already booked");
-
-            var booking = new Booking
+            try
             {
-                Id = Guid.NewGuid(),
-                ClientId = request.ClientId,
-                ServiceId = request.ServiceId,
-                Date = request.Date,
-                Time = request.Time,
-                Status = BookingStatus.Pending     
-            };
+                // FIXED: Inverted logic - booking MUST be in the future
+                if (!BookingRules.IsInFuture(request.Date, request.Time))
+                {
+                    _logger.LogWarning($"Attempted to create booking in the past: {request.Date} {request.Time}");
+                    return ServiceResponse<Guid>.Fail("Booking must be for a future date/time");
+                }
 
-            await _bookingRepo.AddAsync(booking); 
-            await _bookingRepo.SaveChangesAsync(); 
+                // Check if the time slot is already booked
+                if (await _bookingRepo.ExistsAsync(request.StaffId, request.Date, request.Time))
+                {
+                    _logger.LogWarning($"Time slot already booked: Staff {request.StaffId}, {request.Date} {request.Time}");
+                    return ServiceResponse<Guid>.Fail("Time slot already booked");
+                }
 
-            return ServiceResponse<Guid>.Ok(
-               id:booking.Id,
-               message: "Booking created");
+                var booking = new Booking
+                {
+                    Id = Guid.NewGuid(),
+                    ClientId = request.ClientId,
+                    ServiceId = request.ServiceId,
+                    Date = request.Date,
+                    Time = request.Time,
+                    Status = BookingStatus.Pending
+                };
+
+                await _bookingRepo.AddAsync(booking);
+                await _bookingRepo.SaveChangesAsync();
+
+                _logger.LogInformation($"Booking created successfully: {booking.Id}");
+
+                return ServiceResponse<Guid>.Ok(
+                    id: booking.Id,
+                    message: "Booking created successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating booking");
+                return ServiceResponse<Guid>.Fail("An error occurred while creating the booking");
+            }
         }
 
         public async Task<ServiceResponse<bool>> CancelAsync(CancelBookingRequest request)
         {
-            var booking = await _bookingRepo.GetByIdAsync(request.BookingId);
+            try
+            {
+                var booking = await _bookingRepo.GetByIdAsync(request.BookingId);
 
-            if (booking is null)
-                return ServiceResponse<bool>.Fail("Booking not found");
+                if (booking is null)
+                {
+                    _logger.LogWarning($"Booking not found: {request.BookingId}");
+                    return ServiceResponse<bool>.Fail("Booking not found");
+                }
 
-            if (!BookingRules.CanCancel(booking.Status))
-                return ServiceResponse<bool>.Fail("Booking cannot be cancelled");
+                if (!BookingRules.CanCancel(booking.Status))
+                {
+                    _logger.LogWarning($"Cannot cancel booking {request.BookingId} with status {booking.Status}");
+                    return ServiceResponse<bool>.Fail($"Booking cannot be cancelled. Current status: {booking.Status}");
+                }
 
-            if (request.RequesterType == BookingRequesterType.Client &&
-                booking.ClientId != request.RequesterId)
-                return ServiceResponse<bool>.Fail("Unauthorized cancellation");
+                // Validate requester authorization
+                if (request.RequesterType == BookingRequesterType.Client &&
+                    booking.ClientId != request.RequesterId)
+                {
+                    _logger.LogWarning($"Unauthorized cancellation attempt by client {request.RequesterId} for booking {request.BookingId}");
+                    return ServiceResponse<bool>.Fail("You are not authorized to cancel this booking");
+                }
 
-            booking.Status = BookingStatus.Cancelled;
-            await _bookingRepo.UpdateAsync(booking);
-            await _bookingRepo.SaveChangesAsync();
+                booking.Status = BookingStatus.Cancelled;
+                await _bookingRepo.UpdateAsync(booking);
+                await _bookingRepo.SaveChangesAsync();
 
-            return ServiceResponse<bool>.Ok(true, "Booking cancelled");
+                _logger.LogInformation($"Booking cancelled: {booking.Id} by {request.RequesterType}");
+
+                return ServiceResponse<bool>.Ok(true, "Booking cancelled successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error cancelling booking {request.BookingId}");
+                return ServiceResponse<bool>.Fail("An error occurred while cancelling the booking");
+            }
         }
 
         public async Task<ServiceResponse<bool>> ConfirmAsync(Guid bookingId)
         {
-            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            try
+            {
+                var booking = await _bookingRepo.GetByIdAsync(bookingId);
 
-            if (booking is null)
-                return ServiceResponse<bool>.Fail("Booking not found");
+                if (booking is null)
+                {
+                    _logger.LogWarning($"Booking not found: {bookingId}");
+                    return ServiceResponse<bool>.Fail("Booking not found");
+                }
 
-            if (!BookingRules.CanConfirm(booking.Status))
-                return ServiceResponse<bool>.Fail("Booking cannot be confirmed");
+                if (!BookingRules.CanConfirm(booking.Status))
+                {
+                    _logger.LogWarning($"Cannot confirm booking {bookingId} with status {booking.Status}");
+                    return ServiceResponse<bool>.Fail($"Booking cannot be confirmed. Current status: {booking.Status}");
+                }
 
-            booking.Status = BookingStatus.Approved;
-            await _bookingRepo.UpdateAsync(booking);
-            await _bookingRepo.SaveChangesAsync();
+                booking.Status = BookingStatus.Approved;
+                await _bookingRepo.UpdateAsync(booking);
+                await _bookingRepo.SaveChangesAsync();
 
-            return ServiceResponse<bool>.Ok(true, "Booking confirmed");
+                _logger.LogInformation($"Booking confirmed: {booking.Id}");
+
+                return ServiceResponse<bool>.Ok(true, "Booking confirmed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error confirming booking {bookingId}");
+                return ServiceResponse<bool>.Fail("An error occurred while confirming the booking");
+            }
         }
 
         public async Task<ServiceResponse<bool>> CompleteAsync(Guid bookingId)
         {
-            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            try
+            {
+                var booking = await _bookingRepo.GetByIdAsync(bookingId);
 
-            if (booking is null)
-                return ServiceResponse<bool>.Fail("Booking not found");
+                if (booking is null)
+                {
+                    _logger.LogWarning($"Booking not found: {bookingId}");
+                    return ServiceResponse<bool>.Fail("Booking not found");
+                }
 
-            if (!BookingRules.CanComplete(booking.Status))
-                return ServiceResponse<bool>.Fail("Booking cannot be completed");
+                if (!BookingRules.CanComplete(booking.Status))
+                {
+                    _logger.LogWarning($"Cannot complete booking {bookingId} with status {booking.Status}");
+                    return ServiceResponse<bool>.Fail($"Booking cannot be completed. Current status: {booking.Status}");
+                }
 
-            booking.Status = BookingStatus.Completed;
-            await _bookingRepo.UpdateAsync(booking);
-            await _bookingRepo.SaveChangesAsync();
+                booking.Status = BookingStatus.Completed;
+                await _bookingRepo.UpdateAsync(booking);
+                await _bookingRepo.SaveChangesAsync();
 
-            return ServiceResponse<bool>.Ok(true, "Booking completed");
+                _logger.LogInformation($"Booking completed: {booking.Id}");
+
+                return ServiceResponse<bool>.Ok(true, "Booking completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error completing booking {bookingId}");
+                return ServiceResponse<bool>.Fail("An error occurred while completing the booking");
+            }
         }
 
         // =============================
@@ -117,16 +187,34 @@ namespace Bookify.Application.Services
 
         public async Task<ServiceResponse<IEnumerable<BookingResponse>>> GetClientBookingsAsync(Guid clientId)
         {
-            var bookings = await _bookingRepo.GetByClientIdAsync(clientId);
-            return ServiceResponse<IEnumerable<BookingResponse>>.Ok(
-                _mapper.Map<IEnumerable<BookingResponse>>(bookings));
+            try
+            {
+                var bookings = await _bookingRepo.GetByClientIdAsync(clientId);
+                var response = _mapper.Map<IEnumerable<BookingResponse>>(bookings);
+
+                return ServiceResponse<IEnumerable<BookingResponse>>.Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving bookings for client {clientId}");
+                return ServiceResponse<IEnumerable<BookingResponse>>.Fail("An error occurred while retrieving bookings");
+            }
         }
 
         public async Task<ServiceResponse<IEnumerable<BookingResponse>>> GetStaffBookingsAsync(Guid staffId)
         {
-            var bookings = await _bookingRepo.GetByStaffIdAsync(staffId);
-            return ServiceResponse<IEnumerable<BookingResponse>>.Ok(
-                _mapper.Map<IEnumerable<BookingResponse>>(bookings));
+            try
+            {
+                var bookings = await _bookingRepo.GetByStaffIdAsync(staffId);
+                var response = _mapper.Map<IEnumerable<BookingResponse>>(bookings);
+
+                return ServiceResponse<IEnumerable<BookingResponse>>.Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving bookings for staff {staffId}");
+                return ServiceResponse<IEnumerable<BookingResponse>>.Fail("An error occurred while retrieving bookings");
+            }
         }
 
         public async Task<ServiceResponse<IEnumerable<BookingResponse>>> GetAllAsync(
@@ -134,9 +222,18 @@ namespace Bookify.Application.Services
             DateTime? to,
             BookingStatus? status)
         {
-            var bookings = await _bookingRepo.GetAllAsync(from, to, status);
-            return ServiceResponse<IEnumerable<BookingResponse>>.Ok(
-                _mapper.Map<IEnumerable<BookingResponse>>(bookings));
+            try
+            {
+                var bookings = await _bookingRepo.GetAllAsync(from, to, status);
+                var response = _mapper.Map<IEnumerable<BookingResponse>>(bookings);
+
+                return ServiceResponse<IEnumerable<BookingResponse>>.Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all bookings");
+                return ServiceResponse<IEnumerable<BookingResponse>>.Fail("An error occurred while retrieving bookings");
+            }
         }
     }
 }
