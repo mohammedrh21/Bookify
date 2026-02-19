@@ -148,7 +148,7 @@ var app = builder.Build();
 // ============================
 
 // Global Exception Handler (FIRST - to catch all exceptions)
-app.UseGlobalExceptionHandler();
+app.UseGlobalExceptionHandler(app.Environment);
 
 // Serilog Request Logging
 app.UseSerilogRequestLogging();
