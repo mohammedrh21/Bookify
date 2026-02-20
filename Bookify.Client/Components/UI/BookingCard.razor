@@ -1,0 +1,48 @@
+<div class="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
+    <div class="flex items-start justify-between mb-3">
+        <div>
+            <h3 class="font-semibold text-gray-900">@Booking.ServiceName</h3>
+            <p class="text-sm text-gray-400 mt-0.5">with @Booking.StaffName</p>
+        </div>
+        <StatusBadge Status="@Booking.Status" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+            <svg class="w-4 h-4 text-primary-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            @Booking.Date.ToString("MMM dd, yyyy")
+        </div>
+        <div class="flex items-center gap-2 text-sm text-gray-500">
+            <svg class="w-4 h-4 text-primary-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            @Booking.Time.ToString(@"hh\:mm")
+        </div>
+    </div>
+
+    <div class="flex items-center justify-between pt-3 border-t border-gray-50">
+        <span class="text-sm font-bold text-primary-600">$@Booking.Price.ToString("F2")</span>
+        <div class="flex gap-2">
+            @if (Booking.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                <button @onclick="() => OnCancel.InvokeAsync(Booking.Id)"
+                        class="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                    Cancel
+                </button>
+            }
+            <a href="/bookings/@Booking.Id"
+               class="px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors">
+                Details
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public BookingModel        Booking  { get; set; } = default!;
+    [Parameter] public EventCallback<Guid> OnCancel { get; set; }
+}

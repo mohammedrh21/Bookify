@@ -1,0 +1,20 @@
+<div @onclick="OnClick"
+     class="group cursor-pointer bg-white rounded-2xl border p-6 flex flex-col items-center gap-3
+            hover:border-primary-300 hover:bg-primary-50 hover:shadow-md transition-all duration-200
+            @(IsSelected ? "border-primary-400 bg-primary-50 shadow-md" : "border-gray-100")">
+    <div class="text-4xl">@Category.Icon</div>
+    <span class="text-sm font-semibold text-center leading-snug
+                 @(IsSelected ? "text-primary-700" : "text-gray-700 group-hover:text-primary-700")">
+        @Category.Name
+    </span>
+    @if (Category.ServiceCount > 0)
+    {
+        <span class="text-xs text-gray-400">@Category.ServiceCount services</span>
+    }
+</div>
+
+@code {
+    [Parameter] public CategoryModel  Category   { get; set; } = default!;
+    [Parameter] public bool           IsSelected { get; set; }
+    [Parameter] public EventCallback  OnClick    { get; set; }
+}

@@ -27,7 +27,6 @@
 		<ProjectReference Include="..\Bookify.Application\Bookify.Application.csproj" />
 		<ProjectReference Include="..\Bookify.Infrastructure\Bookify.Infrastructure.csproj" />
 		<ProjectReference Include="..\Bookify.ServiceDefaults\Bookify.ServiceDefaults.csproj" />
-		<ProjectReference Include="..\Bookify.Web.Shared\Bookify.Web.Shared.csproj" />
 	</ItemGroup>
 
 </Project>

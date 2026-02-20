@@ -1,0 +1,26 @@
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold @BadgeClass">
+    <span class="w-1.5 h-1.5 rounded-full mr-1.5 @DotClass"></span>
+    @Status
+</span>
+
+@code {
+    [Parameter] public string Status { get; set; } = "Pending";
+
+    private string BadgeClass => Status.ToLower() switch
+    {
+        "pending"   => "bg-yellow-100 text-yellow-800",
+        "approved"  => "bg-green-100 text-green-800",
+        "cancelled" => "bg-red-100 text-red-700",
+        "completed" => "bg-blue-100 text-blue-800",
+        _           => "bg-gray-100 text-gray-700"
+    };
+
+    private string DotClass => Status.ToLower() switch
+    {
+        "pending"   => "bg-yellow-500",
+        "approved"  => "bg-green-500",
+        "cancelled" => "bg-red-500",
+        "completed" => "bg-blue-500",
+        _           => "bg-gray-400"
+    };
+}

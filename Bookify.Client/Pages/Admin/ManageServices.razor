@@ -1,0 +1,173 @@
+@page "/admin/services"
+@attribute [Authorize(Roles = "Admin")]
+@inject IServiceApiService ServiceService
+
+<PageTitle>Manage Services — Bookify Admin</PageTitle>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Services</h1>
+            <p class="text-gray-400 mt-1">Manage all bookable services</p>
+        </div>
+        <button @onclick="ShowCreateForm"
+                class="inline-flex items-center px-5 py-2.5 bg-primary-600 text-white font-semibold rounded-xl text-sm hover:bg-primary-700 transition-colors gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Service
+        </button>
+    </div>
+
+    <AlertMessage Message="@_message" Type="@_msgType" />
+
+    <!-- Create / Edit Form -->
+    @if (_showForm)
+    {
+        <div class="bg-white rounded-2xl border border-primary-200 p-6 mb-6 shadow-sm">
+            <h2 class="font-semibold text-gray-900 mb-4">
+                @(_editModel.Id == Guid.Empty ? "➕ New Service" : "✏️ Edit Service")
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input @bind="_editModel.Name" placeholder="Service name"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+                    <input @bind="_editModel.Price" type="number" min="0" step="0.01"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Duration (min)</label>
+                    <input @bind="_editModel.Duration" type="number" min="5" step="5"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea @bind="_editModel.Description" rows="2"
+                              class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none"></textarea>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button @onclick="SaveService" disabled="@_saving"
+                        class="px-6 py-2.5 bg-primary-600 text-white font-semibold rounded-xl text-sm hover:bg-primary-700 disabled:opacity-60 transition-colors">
+                    @(_saving ? "Saving..." : "Save")
+                </button>
+                <button @onclick="() => _showForm = false"
+                        class="px-6 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl text-sm hover:bg-gray-200 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (_loading)
+    {
+        <LoadingSpinner />
+    }
+    else if (_services.Count == 0)
+    {
+        <EmptyState Icon="🛎️" Title="No services yet" Message="Add your first service to get started." />
+    }
+    else
+    {
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            @foreach (var svc in _services.Where(s => !s.IsDeleted))
+            {
+                <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div class="h-1 bg-gradient-to-r from-primary-400 to-primary-600"></div>
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-2">
+                            <h3 class="font-semibold text-gray-900 flex-1 pr-2">@svc.Name</h3>
+                            <span class="text-primary-600 font-bold text-sm shrink-0">$@svc.Price.ToString("F0")</span>
+                        </div>
+                        <p class="text-gray-400 text-xs mb-3 line-clamp-2">@svc.Description</p>
+                        <div class="flex items-center justify-between text-xs text-gray-400 mb-4">
+                            <span>⏱ @svc.Duration min</span>
+                            <span>👤 @svc.StaffName</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @onclick="() => EditService(svc)"
+                                    class="flex-1 py-2 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors">
+                                Edit
+                            </button>
+                            <button @onclick="() => DeleteService(svc.Id)"
+                                    class="flex-1 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<ServiceModel> _services  = [];
+    private ServiceModel       _editModel = new();
+    private bool               _loading   = true;
+    private bool               _showForm  = false;
+    private bool               _saving    = false;
+    private string             _message   = string.Empty;
+    private string             _msgType   = "info";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _services = await ServiceService.GetAllAsync();
+        _loading  = false;
+    }
+
+    private void ShowCreateForm() { _editModel = new(); _showForm = true; }
+
+    private void EditService(ServiceModel svc)
+    {
+        _editModel = new ServiceModel
+        {
+            Id          = svc.Id,
+            Name        = svc.Name,
+            Description = svc.Description,
+            Price       = svc.Price,
+            Duration    = svc.Duration,
+            StaffId     = svc.StaffId,
+            CategoryId  = svc.CategoryId,
+        };
+        _showForm = true;
+    }
+
+    private async Task SaveService()
+    {
+        _saving = true;
+        StateHasChanged();
+
+        bool ok = _editModel.Id == Guid.Empty
+            ? await ServiceService.CreateAsync(_editModel)
+            : await ServiceService.UpdateAsync(_editModel);
+
+        if (ok)
+        {
+            _services = await ServiceService.GetAllAsync();
+            _message  = "Service saved successfully.";
+            _msgType  = "success";
+            _showForm = false;
+        }
+        else
+        {
+            _message = "Failed to save. Please try again.";
+            _msgType = "error";
+        }
+        _saving = false;
+    }
+
+    private async Task DeleteService(Guid id)
+    {
+        if (await ServiceService.DeleteAsync(id))
+        {
+            _services = await ServiceService.GetAllAsync();
+            _message  = "Service deleted.";
+            _msgType  = "warning";
+        }
+    }
+}

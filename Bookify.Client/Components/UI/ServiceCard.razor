@@ -1,0 +1,41 @@
+<div class="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col">
+    <!-- Top color band -->
+    <div class="h-1.5 bg-gradient-to-r from-primary-400 to-primary-600"></div>
+
+    <div class="p-5 flex flex-col flex-1">
+        <div class="flex items-start justify-between mb-2">
+            <h3 class="font-semibold text-gray-900 text-base leading-snug flex-1 pr-2">@Service.Name</h3>
+            <span class="text-base font-bold text-primary-600 whitespace-nowrap">
+                $@Service.Price.ToString("F0")
+            </span>
+        </div>
+
+        <p class="text-gray-400 text-sm mb-4 line-clamp-2 flex-1">@Service.Description</p>
+
+        <div class="flex items-center gap-3 mb-4 text-xs text-gray-400">
+            <span class="flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                @Service.Duration min
+            </span>
+            <span class="flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                @Service.StaffName
+            </span>
+        </div>
+
+        <a href="/book/@Service.Id"
+           class="block w-full text-center py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm transition-colors">
+            Book Now
+        </a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ServiceModel Service { get; set; } = default!;
+}

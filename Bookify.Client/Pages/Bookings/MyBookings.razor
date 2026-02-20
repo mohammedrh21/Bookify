@@ -1,0 +1,101 @@
+@page "/my-bookings"
+@attribute [Authorize]
+@inject IBookingService BookingService
+
+<PageTitle>My Bookings — Bookify</PageTitle>
+
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">My Bookings</h1>
+            <p class="text-gray-400 mt-1">Track and manage your appointments</p>
+        </div>
+        <a href="/services"
+           class="inline-flex items-center px-5 py-2.5 bg-primary-600 text-white font-semibold rounded-xl text-sm hover:bg-primary-700 transition-colors gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            New Booking
+        </a>
+    </div>
+
+    <!-- Status Tabs -->
+    <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit flex-wrap">
+        @foreach (var tab in _tabs)
+        {
+            <button @onclick="() => _activeTab = tab"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+                           @(_activeTab == tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")">
+                @tab
+                @if (tab != "All")
+                {
+                    var count = _bookings.Count(b => b.Status.Equals(tab, StringComparison.OrdinalIgnoreCase));
+                    if (count > 0)
+                    {
+                        <span class="ml-1.5 text-xs bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded-full">@count</span>
+                    }
+                }
+            </button>
+        }
+    </div>
+
+    <AlertMessage Message="@_message" Type="@_messageType" />
+
+    @if (_loading)
+    {
+        <LoadingSpinner Message="Loading bookings..." />
+    }
+    else if (FilteredBookings.Count == 0)
+    {
+        <EmptyState Icon="📅" Title="No bookings found"
+                    Message="@(_activeTab == "All" ? "You haven't made any bookings yet." : $"No {_activeTab.ToLower()} bookings.")"
+                    ActionHref="/services" ActionLabel="Browse Services" />
+    }
+    else
+    {
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @foreach (var b in FilteredBookings.OrderByDescending(x => x.Date))
+            {
+                <BookingCard Booking="b" OnCancel="CancelBooking" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<BookingModel> _bookings     = [];
+    private bool               _loading      = true;
+    private string             _activeTab    = "All";
+    private string             _message      = string.Empty;
+    private string             _messageType  = "info";
+
+    private readonly string[] _tabs = ["All", "Pending", "Approved", "Completed", "Cancelled"];
+
+    private List<BookingModel> FilteredBookings => _activeTab == "All"
+        ? _bookings
+        : _bookings.Where(b => b.Status.Equals(_activeTab, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _bookings = await BookingService.GetMyBookingsAsync();
+        _loading  = false;
+    }
+
+    private async Task CancelBooking(Guid id)
+    {
+        var ok = await BookingService.CancelAsync(id);
+        if (ok)
+        {
+            var b = _bookings.FirstOrDefault(x => x.Id == id);
+            if (b is not null) b.Status = "Cancelled";
+            _message     = "Booking cancelled successfully.";
+            _messageType = "success";
+        }
+        else
+        {
+            _message     = "Failed to cancel booking. Please try again.";
+            _messageType = "error";
+        }
+        StateHasChanged();
+    }
+}
