@@ -9,8 +9,13 @@ namespace Bookify.Application.Interfaces.Category
 {
     public interface ICategoryService
     {
+        // Queries
         Task<ServiceResponse<CategoryResponse>> GetAsync(Guid id);
+        Task<ServiceResponse<IEnumerable<CategoryResponse>>> GetAllAsync();
+
+        // Commands
         Task<ServiceResponse<Guid>> CreateAsync(CreateCategoryRequest request);
         Task<ServiceResponse<Guid>> UpdateAsync(UpdateCategoryRequest request);
+        Task<ServiceResponse<bool>> DeactivateAsync(Guid id);
     }
 }

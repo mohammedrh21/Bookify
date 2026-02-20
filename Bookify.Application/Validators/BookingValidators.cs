@@ -12,36 +12,35 @@ namespace Bookify.Application.Validators
         {
             RuleFor(x => x.ServiceId)
                 .NotEmpty()
-                .WithMessage("Service is required");
+                    .WithMessage("Service ID is required.");
 
             RuleFor(x => x.StaffId)
                 .NotEmpty()
-                .WithMessage("Staff is required");
+                    .WithMessage("Staff ID is required.");
 
             RuleFor(x => x.ClientId)
                 .NotEmpty()
-                .WithMessage("Client is required");
+                    .WithMessage("Client ID is required.");
 
             RuleFor(x => x.Date)
                 .NotEmpty()
-                .WithMessage("Booking date is required")
-                .GreaterThanOrEqualTo(DateTime.Today)
-                .WithMessage("Booking date must be today or in the future");
+                    .WithMessage("Booking date is required.")
+                .GreaterThanOrEqualTo(DateTime.UtcNow.Date)
+                    .WithMessage("Booking date cannot be in the past.");
 
             RuleFor(x => x.Time)
                 .NotEmpty()
-                .WithMessage("Booking time is required")
-                .Must(time => time >= TimeSpan.Zero && time < TimeSpan.FromHours(24))
-                .WithMessage("Time must be a valid time of day (00:00-23:59)");
+                    .WithMessage("Booking time is required.")
+                .Must(t => t >= TimeSpan.Zero && t < TimeSpan.FromHours(24))
+                    .WithMessage("Time must be a valid time of day (00:00 – 23:59).")
+                .Must(t => t.Minutes % 15 == 0)
+                    .WithMessage("Bookings must start on a 15-minute boundary (e.g. 09:00, 09:15).");
 
+            // Combined future-datetime check
             RuleFor(x => new { x.Date, x.Time })
-                .Must(x =>
-                {
-                    var bookingDateTime = x.Date.Date + x.Time;
-                    return bookingDateTime > DateTime.UtcNow;
-                })
-                .WithMessage("Booking must be in the future")
-                .When(x => x.Date >= DateTime.Today);
+                .Must(x => x.Date.Date + x.Time > DateTime.UtcNow)
+                    .WithMessage("Booking must be scheduled in the future.")
+                .When(x => x.Date >= DateTime.UtcNow.Date);
         }
     }
 
@@ -51,16 +50,15 @@ namespace Bookify.Application.Validators
         {
             RuleFor(x => x.BookingId)
                 .NotEmpty()
-                .WithMessage("Booking ID is required");
+                    .WithMessage("Booking ID is required.");
 
             RuleFor(x => x.RequesterId)
                 .NotEmpty()
-                .WithMessage("Requester ID is required");
+                    .WithMessage("Requester ID is required.");
 
             RuleFor(x => x.RequesterType)
                 .IsInEnum()
-                .WithMessage("Invalid requester type");
+                    .WithMessage("Invalid requester type.");
         }
     }
 }
-

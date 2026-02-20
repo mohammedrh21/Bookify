@@ -16,6 +16,7 @@ namespace Bookify.Infrastructure.Repositories
             _db = db;
         }
 
+        public async Task<IEnumerable<Category>> GetAllAsync() => await _db.Categories.Where(x => x.IsActive).AsNoTracking().ToListAsync();
         public async Task AddAsync(Category category) => await _db.AddAsync(category);
 
         public async Task<Category?> GetByIdAsync(Guid id)

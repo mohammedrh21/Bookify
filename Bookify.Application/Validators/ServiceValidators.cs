@@ -12,39 +12,38 @@ namespace Bookify.Application.Validators
         {
             RuleFor(x => x.Name)
                 .NotEmpty()
-                .WithMessage("Service name is required")
-                .MinimumLength(5)
-                .WithMessage("Service name must be at least 5 characters")
+                    .WithMessage("Service name is required.")
+                .MinimumLength(3)
+                    .WithMessage("Service name must be at least 3 characters.")
                 .MaximumLength(100)
-                .WithMessage("Service name cannot exceed 100 characters");
+                    .WithMessage("Service name cannot exceed 100 characters.")
+                .Matches(@"^[a-zA-Z0-9\s\-&']+$")
+                    .WithMessage("Service name contains invalid characters.");
 
             RuleFor(x => x.Description)
-                .NotEmpty()
-                .WithMessage("Description is required")
-                .MinimumLength(10)
-                .WithMessage("Description must be at least 10 characters")
-                .MaximumLength(500)
-                .WithMessage("Description cannot exceed 500 characters");
+                .MaximumLength(1000)
+                    .WithMessage("Description cannot exceed 1000 characters.")
+                .When(x => !string.IsNullOrEmpty(x.Description));
 
             RuleFor(x => x.Price)
                 .GreaterThan(0)
-                .WithMessage("Price must be greater than zero")
-                .LessThanOrEqualTo(100000)
-                .WithMessage("Price cannot exceed 100,000");
+                    .WithMessage("Price must be greater than zero.")
+                .LessThanOrEqualTo(100_000)
+                    .WithMessage("Price cannot exceed 100,000.")
+                .PrecisionScale(10, 2, false)
+                    .WithMessage("Price must have at most 2 decimal places.");
 
             RuleFor(x => x.Duration)
-                .GreaterThanOrEqualTo(30)
-                .WithMessage("Duration must be at least 30 minutes")
-                .LessThanOrEqualTo(480)
-                .WithMessage("Duration cannot exceed 480 minutes (8 hours)");
+                .InclusiveBetween(30, 480)
+                    .WithMessage("Duration must be between 30 and 480 minutes (8 hours).");
 
             RuleFor(x => x.StaffId)
                 .NotEmpty()
-                .WithMessage("Staff is required");
+                    .WithMessage("Staff ID is required.");
 
             RuleFor(x => x.CategoryId)
                 .NotEmpty()
-                .WithMessage("Category is required");
+                    .WithMessage("Category ID is required.");
         }
     }
 
@@ -54,35 +53,35 @@ namespace Bookify.Application.Validators
         {
             RuleFor(x => x.Id)
                 .NotEmpty()
-                .WithMessage("Service ID is required");
+                    .WithMessage("Service ID is required.");
 
             RuleFor(x => x.Name)
                 .NotEmpty()
-                .WithMessage("Service name is required")
-                .MinimumLength(5)
-                .WithMessage("Service name must be at least 5 characters")
+                    .WithMessage("Service name is required.")
+                .MinimumLength(3)
+                    .WithMessage("Service name must be at least 3 characters.")
                 .MaximumLength(100)
-                .WithMessage("Service name cannot exceed 100 characters");
+                    .WithMessage("Service name cannot exceed 100 characters.")
+                .Matches(@"^[a-zA-Z0-9\s\-&']+$")
+                    .WithMessage("Service name contains invalid characters.");
 
             RuleFor(x => x.Description)
-                .NotEmpty()
-                .WithMessage("Description is required")
-                .MinimumLength(10)
-                .WithMessage("Description must be at least 10 characters")
-                .MaximumLength(500)
-                .WithMessage("Description cannot exceed 500 characters");
+                .MaximumLength(1000)
+                    .WithMessage("Description cannot exceed 1000 characters.")
+                .When(x => !string.IsNullOrEmpty(x.Description));
 
             RuleFor(x => x.Price)
                 .GreaterThan(0)
-                .WithMessage("Price must be greater than zero")
-                .LessThanOrEqualTo(100000)
-                .WithMessage("Price cannot exceed 100,000");
+                    .WithMessage("Price must be greater than zero.")
+                .LessThanOrEqualTo(100_000)
+                    .WithMessage("Price cannot exceed 100,000.")
+                .PrecisionScale(10, 2, false)
+                    .WithMessage("Price must have at most 2 decimal places.");
 
             RuleFor(x => x.Duration)
-                .GreaterThanOrEqualTo(30)
-                .WithMessage("Duration must be at least 30 minutes")
-                .LessThanOrEqualTo(480)
-                .WithMessage("Duration cannot exceed 480 minutes (8 hours)");
+                .InclusiveBetween(30, 480)
+                    .WithMessage("Duration must be between 30 and 480 minutes (8 hours).");
         }
     }
 }
+

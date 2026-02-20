@@ -1,106 +1,190 @@
 ﻿using AutoMapper;
 using Bookify.Application.Common;
 using Bookify.Application.DTO.Service;
+using Bookify.Application.Interfaces;
 using Bookify.Application.Interfaces.Service;
 using Bookify.Domain.Contracts.Category;
 using Bookify.Domain.Contracts.Service;
 using Bookify.Domain.Entities;
+using Bookify.Domain.Exceptions;
 using Bookify.Domain.Rules;
 
 namespace Bookify.Application.Services
 {
-    public class ServiceService : IServiceService
+    /// <summary>
+    /// Application service for managing bookable <see cref="Service"/> entities.
+    /// </summary>
+    public sealed class ServiceService : IServiceService
     {
         private readonly IServiceRepository _repo;
-        private readonly ICategoryRepository _categoryRepository;
+        private readonly ICategoryRepository _categoryRepo;
         private readonly IMapper _mapper;
+        private readonly IAppLogger<ServiceService> _logger;
 
-        public ServiceService(IServiceRepository repo, ICategoryRepository categoryRepository, IMapper mapper)
+        public ServiceService(
+            IServiceRepository repo,
+            ICategoryRepository categoryRepo,
+            IMapper mapper,
+            IAppLogger<ServiceService> logger)
         {
             _repo = repo;
-            _categoryRepository = categoryRepository;
+            _categoryRepo = categoryRepo;
             _mapper = mapper;
+            _logger = logger;
         }
 
+        // ─────────────────────────────────────────────
+        // Queries
+        // ─────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        /// <exception cref="NotFoundException">When the service does not exist or is soft-deleted.</exception>
+        public async Task<ServiceResponse<ServiceResponse>> GetByIdAsync(Guid id)
+        {
+            _logger.LogInformation($"Fetching service: {id}");
+
+            var service = await _repo.GetByIdAsync(id);
+
+            if (service is null || service.IsDeleted)
+                throw new NotFoundException(nameof(Service), id);
+
+            return ServiceResponse<ServiceResponse>.Ok(
+                data: _mapper.Map<ServiceResponse>(service));
+        }
+
+        /// <inheritdoc/>
+        public async Task<ServiceResponse<IEnumerable<ServiceResponse>>> GetAllAsync()
+        {
+            _logger.LogInformation("Fetching all active services");
+
+            var services = await _repo.GetAllAsync();
+            var active = services.Where(s => !s.IsDeleted);
+
+            return ServiceResponse<IEnumerable<ServiceResponse>>.Ok(
+                data: _mapper.Map<IEnumerable<ServiceResponse>>(active));
+        }
+
+        // ─────────────────────────────────────────────
+        // Commands
+        // ─────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        /// <exception cref="NotFoundException">When the referenced category does not exist.</exception>
+        /// <exception cref="ConflictException">When a service with the same name already exists for this staff.</exception>
+        /// <exception cref="BusinessRuleException">When domain rules (duration, price, etc.) are violated.</exception>
         public async Task<ServiceResponse<Guid>> CreateAsync(CreateServiceRequest request)
         {
-            if (await _categoryRepository.GetByIdAsync(request.CategoryId) == null)
-                return ServiceResponse<Guid>.Fail("Servic category not found!");
+            _logger.LogInformation($"Creating service '{request.Name}' for staff {request.StaffId}");
 
-            if (await _repo.ExistsAsync(request.Name, request.StaffId))
-                return ServiceResponse<Guid>.Fail("Service with the same name already exists for this staff.");
+            // 1. Validate category exists
+            var category = await _categoryRepo.GetByIdAsync(request.CategoryId)
+                ?? throw new NotFoundException("Category", request.CategoryId);
 
-            if (!ServiceRules.CanBeAssignedToStaff(request.StaffId))
-                return ServiceResponse<Guid>.Fail("StaffId is not valid");
+            if (!category.IsActive)
+                throw new BusinessRuleException("Cannot create a service under an inactive category.");
 
-            if (!ServiceRules.CanBeCreated(request.Name, request.Price, request.Duration, request.StaffId, request.CategoryId))
-                return ServiceResponse<Guid>.Fail("Service Rules: have unique name, have at least 30 min duration, having at most 480 min");
+            // 2. Duplicate check for this staff member
+            if (await _repo.ExistsAsync(request.Name.Trim(), request.StaffId))
+                throw new ConflictException(
+                    $"Staff already has a service named '{request.Name}'. Choose a different name.");
 
-            var service = new Service()
+            // 3. Domain rule guard
+            if (!ServiceRules.CanBeCreated(
+                    request.Name, request.Price, request.Duration,
+                    request.StaffId, request.CategoryId))
             {
-                Name = request.Name,
-                Description= request.Description,
+                throw new BusinessRuleException(
+                    "Service does not satisfy business rules. " +
+                    "Ensure: name ≥ 3 chars, price > 0, duration 30–480 min, valid staff and category.");
+            }
+
+            var service = new Service
+            {
+                Id = Guid.NewGuid(),
+                Name = request.Name.Trim(),
+                Description = request.Description?.Trim() ?? string.Empty,
                 Duration = request.Duration,
                 Price = request.Price,
                 StaffId = request.StaffId,
                 CategoryId = request.CategoryId,
+                IsDeleted = false
             };
 
             await _repo.AddAsync(service);
             await _repo.SaveChangesAsync();
 
-            return ServiceResponse<Guid>.Ok(service.Id, "Service created successfully");
+            _logger.LogInformation($"Service created: {service.Id}");
+
+            return ServiceResponse<Guid>.Ok(service.Id, "Service created successfully.");
         }
 
+        /// <inheritdoc/>
+        /// <exception cref="NotFoundException">When the service does not exist or is soft-deleted.</exception>
+        /// <exception cref="BusinessRuleException">When updated values violate domain rules.</exception>
         public async Task<ServiceResponse<bool>> UpdateAsync(UpdateServiceRequest request)
         {
+            _logger.LogInformation($"Updating service: {request.Id}");
+
             var service = await _repo.GetByIdAsync(request.Id);
 
-            if (service == null)
-                return ServiceResponse<bool>.Fail("Service not found");
+            if (service is null || service.IsDeleted)
+                throw new NotFoundException(nameof(Service), request.Id);
+
+            // Validate individual rules with clear messages
+            if (!ServiceRules.IsValidName(request.Name))
+                throw new BusinessRuleException("Service name is invalid (3–100 characters required).");
 
             if (!ServiceRules.IsValidPrice(request.Price))
-                return ServiceResponse<bool>.Fail("Price is invalid");
-
-            if (!ServiceRules.IsValidName(request.Name))
-                return ServiceResponse<bool>.Fail("Service name is invalid");
+                throw new BusinessRuleException("Price must be greater than 0 and at most 100,000.");
 
             if (!ServiceRules.IsValidDuration(request.Duration))
-                return ServiceResponse<bool>.Fail("Duration is invalid");
+                throw new BusinessRuleException("Duration must be between 30 and 480 minutes.");
 
+            service.Name = request.Name.Trim();
+            service.Description = request.Description?.Trim() ?? service.Description;
             service.Price = request.Price;
-            service.Name = request.Name;
-            service.Description = request.Description;
             service.Duration = request.Duration;
 
             await _repo.UpdateAsync(service);
             await _repo.SaveChangesAsync();
 
-            return ServiceResponse<bool>.Ok(true, "Service updated successfully");
+            _logger.LogInformation($"Service updated: {service.Id}");
+
+            return ServiceResponse<bool>.Ok(true, "Service updated successfully.");
         }
 
+        /// <summary>
+        /// Soft-deletes a service. Active bookings block deletion.
+        /// </summary>
+        /// <exception cref="NotFoundException">When the service does not exist or is already deleted.</exception>
+        /// <exception cref="BusinessRuleException">When there are pending or confirmed bookings tied to this service.</exception>
         public async Task<ServiceResponse<bool>> DeleteAsync(Guid id)
         {
+            _logger.LogInformation($"Soft-deleting service: {id}");
+
             var service = await _repo.GetByIdAsync(id);
-            if (service == null)
-                return ServiceResponse<bool>.Fail("Service not found");
+
+            if (service is null || service.IsDeleted)
+                throw new NotFoundException(nameof(Service), id);
+
+            // Guard: block deletion when active bookings exist
+            bool hasActiveBookings = service.Bookings?.Any(b =>
+                b.Status == Domain.Enums.BookingStatus.Pending ||
+                b.Status == Domain.Enums.BookingStatus.Approved) == true;
+
+            if (hasActiveBookings)
+                throw new BusinessRuleException(
+                    "Cannot delete a service with pending or confirmed bookings. " +
+                    "Please cancel or complete those bookings first.");
+
             service.IsDeleted = true;
+
             await _repo.UpdateAsync(service);
             await _repo.SaveChangesAsync();
 
-            return ServiceResponse<bool>.Ok(true, "Service deleted successfully");
-        }
+            _logger.LogInformation($"Service soft-deleted: {id}");
 
-        public async Task<ServiceResponse<ServiceResponse>> GetByIdAsync(Guid id)
-        {
-            var service = await _repo.GetByIdAsync(id);
-            return ServiceResponse<ServiceResponse>.Ok(_mapper.Map<ServiceResponse>(service));
-        }
-
-        public async Task<ServiceResponse<IEnumerable<ServiceResponse>>> GetAllAsync()
-        {
-            var services = await _repo.GetAllAsync();
-            return ServiceResponse<IEnumerable<ServiceResponse>>.Ok(_mapper.Map<IEnumerable<ServiceResponse>>(services));
+            return ServiceResponse<bool>.Ok(true, "Service deleted successfully.");
         }
     }
 }
