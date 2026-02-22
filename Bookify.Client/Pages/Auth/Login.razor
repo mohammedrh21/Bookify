@@ -75,13 +75,13 @@
         _error = string.Empty;
         StateHasChanged();
 
-        var result = await AuthService.LoginAsync(_model);
+        var (success, message) = await AuthService.LoginAsync(_model);
 
-        if (result.IsSuccess)
+        if (success)
             Nav.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
         else
         {
-            _error = result.Message ?? "Login failed. Please check your credentials.";
+            _error = message ?? "Login failed. Please check your credentials.";
             _loading = false;
         }
     }

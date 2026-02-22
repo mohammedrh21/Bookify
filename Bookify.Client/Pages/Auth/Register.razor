@@ -83,9 +83,9 @@
         _error = _success = string.Empty;
         StateHasChanged();
 
-        var result = await AuthService.RegisterAsync(_model);
+        var (success, message) = await AuthService.RegisterAsync(_model);
 
-        if (result.IsSuccess)
+        if (success)
         {
             _success = "Account created! Redirecting to login...";
             StateHasChanged();
@@ -94,7 +94,7 @@
         }
         else
         {
-            _error   = result.Message ?? "Registration failed.";
+            _error   = message ?? "Registration failed.";
             _loading = false;
         }
     }

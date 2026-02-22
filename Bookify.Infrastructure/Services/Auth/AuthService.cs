@@ -163,11 +163,13 @@ namespace Bookify.Infrastructure.Services.Auth
             return ServiceResponse<LoginResponse>.Ok(
                 new LoginResponse
                 {
-                    Token = accessToken,
+                    AccessToken = accessToken,
                     RefreshToken = refreshToken,
                     Expiration = DateTime.UtcNow.AddHours(1),
                     Role = roles.FirstOrDefault() ?? "User",
-                    UserId = Guid.Parse(identityUser.Id)
+                    UserId = Guid.Parse(identityUser.Id),
+                    FullName = identityUser.FullName ?? identityUser.UserName ?? string.Empty,
+                    Email = identityUser.Email ?? string.Empty
                 },
                 "Login successful");
         }
@@ -216,11 +218,13 @@ namespace Bookify.Infrastructure.Services.Auth
             return ServiceResponse<LoginResponse>.Ok(
                 new LoginResponse
                 {
-                    Token = newAccessToken,
+                    AccessToken = newAccessToken,
                     RefreshToken = newRefreshToken,
                     Expiration = DateTime.UtcNow.AddHours(1),
                     Role = roles.FirstOrDefault() ?? "User",
-                    UserId = Guid.Parse(identityUser.Id)
+                    UserId = Guid.Parse(identityUser.Id),
+                    FullName = identityUser.FullName ?? identityUser.UserName ?? string.Empty,
+                    Email = identityUser.Email ?? string.Empty
                 },
                 "Token refreshed successfully");
         }
