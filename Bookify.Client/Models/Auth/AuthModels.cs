@@ -8,20 +8,23 @@ public class LoginRequest
 
 public class RegisterRequest
 {
-    public string FullName { get; set; } = string.Empty;
-    public string Email    { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public string Phone    { get; set; } = string.Empty;
-    public string Role     { get; set; } = "Client";
+    public string    FullName    { get; set; } = string.Empty;
+    public string    Email       { get; set; } = string.Empty;
+    public string    Password    { get; set; } = string.Empty;
+    public string    Phone       { get; set; } = string.Empty;
+    public DateTime? DateOfBirth { get; set; }
 }
 
-public class AuthResponse
+/// <summary>
+/// Matches the API's <c>LoginResponse</c> DTO (nested inside <c>ServiceResponse&lt;T&gt;</c>).
+/// </summary>
+public class LoginResponseModel
 {
-    public bool   IsSuccess    { get; set; }
-    public string AccessToken  { get; set; } = string.Empty;
-    public string RefreshToken { get; set; } = string.Empty;
-    public string FullName     { get; set; } = string.Empty;
-    public string Email        { get; set; } = string.Empty;
-    public string Role         { get; set; } = string.Empty;
-    public string? Message     { get; set; }
+    public string   AccessToken  { get; set; } = string.Empty;
+    public string   RefreshToken { get; set; } = string.Empty;
+    public DateTime Expiration   { get; set; }
+    public string   Role         { get; set; } = string.Empty;
+    public Guid     UserId       { get; set; }
+    public string   FullName     { get; set; } = string.Empty;
+    public string   Email        { get; set; } = string.Empty;
 }

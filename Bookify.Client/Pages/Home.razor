@@ -126,10 +126,14 @@
 
 @code {
     private List<CategoryModel> _categories        = [];
-    private List<ServiceModel>  _services          = [];
+    private List<ServiceModel>  _allServices       = [];
     private bool                _loadingCategories = true;
     private bool                _loadingServices   = true;
     private Guid?               _selectedCategoryId;
+
+    private List<ServiceModel> _services => _selectedCategoryId.HasValue
+        ? _allServices.Where(s => s.CategoryId == _selectedCategoryId.Value && !s.IsDeleted).ToList()
+        : _allServices.Where(s => !s.IsDeleted).ToList();
 
     private readonly (string Icon, string Title, string Desc)[] _features =
     [
@@ -149,20 +153,12 @@
         _categories        = await catTask;
         _loadingCategories = false;
 
-        _services        = await svcTask;
+        _allServices     = await svcTask;
         _loadingServices = false;
     }
 
-    private async Task SelectCategory(Guid id)
+    private void SelectCategory(Guid id)
     {
         _selectedCategoryId = _selectedCategoryId == id ? null : id;
-        _loadingServices    = true;
-        StateHasChanged();
-
-        _services = _selectedCategoryId.HasValue
-            ? await ServiceService.GetByCategoryAsync(_selectedCategoryId.Value)
-            : await ServiceService.GetAllAsync();
-
-        _loadingServices = false;
     }
 }
