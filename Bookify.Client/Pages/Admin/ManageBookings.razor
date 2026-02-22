@@ -129,12 +129,13 @@
 
     private async Task Approve(Guid id)
     {
-        if (await BookingService.ApproveAsync(id)) { UpdateStatus(id, "Approved"); SetMsg("Booking approved.", "success"); }
+        if (await BookingService.ConfirmAsync(id)) { UpdateStatus(id, "Approved"); SetMsg("Booking approved.", "success"); }
     }
 
     private async Task Cancel(Guid id)
     {
-        if (await BookingService.CancelAsync(id)) { UpdateStatus(id, "Cancelled"); SetMsg("Booking cancelled.", "warning"); }
+        // Admin cancel — requesterId is not used for admin
+        if (await BookingService.CancelAsync(id, Guid.Empty, "Staff")) { UpdateStatus(id, "Cancelled"); SetMsg("Booking cancelled.", "warning"); }
     }
 
     private async Task Complete(Guid id)

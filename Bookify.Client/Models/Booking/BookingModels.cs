@@ -4,6 +4,8 @@ public class BookingModel
 {
     public Guid     Id              { get; set; }
     public Guid     ServiceId       { get; set; }
+    public Guid     ClientId        { get; set; }
+    public Guid     StaffId         { get; set; }
     public string   ServiceName     { get; set; } = string.Empty;
     public string   StaffName       { get; set; } = string.Empty;
     public string   ClientName      { get; set; } = string.Empty;

@@ -3,9 +3,6 @@ using Bookify.Domain.Entities;
 using Bookify.Domain.Enums;
 using Bookify.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Bookify.Infrastructure.Repositories
 {
@@ -20,6 +17,7 @@ namespace Bookify.Infrastructure.Repositories
 
         public async Task AddAsync(Booking booking)
             => await _db.Bookings.AddAsync(booking);
+
         public Task UpdateAsync(Booking booking)
         {
             _db.Bookings.Update(booking);
@@ -27,16 +25,32 @@ namespace Bookify.Infrastructure.Repositories
         }
 
         public async Task<Booking?> GetByIdAsync(Guid id)
-            => await _db.Bookings.FirstOrDefaultAsync(b => b.Id == id);
+            => await _db.Bookings
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Staff)
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Category)
+                .Include(b => b.Client)
+                .FirstOrDefaultAsync(b => b.Id == id);
 
         public async Task<IEnumerable<Booking>> GetByClientIdAsync(Guid clientId)
             => await _db.Bookings
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Staff)
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Category)
+                .Include(b => b.Client)
                 .Where(b => b.ClientId == clientId)
                 .AsNoTracking()
                 .ToListAsync();
 
         public async Task<IEnumerable<Booking>> GetByStaffIdAsync(Guid staffId)
             => await _db.Bookings
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Staff)
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Category)
+                .Include(b => b.Client)
                 .Where(b => b.Service.StaffId == staffId)
                 .AsNoTracking()
                 .ToListAsync();
@@ -46,7 +60,13 @@ namespace Bookify.Infrastructure.Repositories
             DateTime? to,
             BookingStatus? status)
         {
-            var query = _db.Bookings.AsQueryable();
+            var query = _db.Bookings
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Staff)
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Category)
+                .Include(b => b.Client)
+                .AsQueryable();
 
             if (from.HasValue)
                 query = query.Where(b => b.Date >= from);

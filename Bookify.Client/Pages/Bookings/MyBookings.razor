@@ -1,6 +1,7 @@
 @page "/my-bookings"
 @attribute [Authorize]
 @inject IBookingService BookingService
+@inject IAuthService AuthService
 
 <PageTitle>My Bookings — Bookify</PageTitle>
 
@@ -77,13 +78,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _bookings = await BookingService.GetMyBookingsAsync();
-        _loading  = false;
+        var userId = await AuthService.GetUserIdAsync();
+        if (userId.HasValue)
+            _bookings = await BookingService.GetClientBookingsAsync(userId.Value);
+        _loading = false;
     }
 
     private async Task CancelBooking(Guid id)
     {
-        var ok = await BookingService.CancelAsync(id);
+        var userId = await AuthService.GetUserIdAsync();
+        if (userId is null) return;
+
+        var ok = await BookingService.CancelAsync(id, userId.Value, "Client");
         if (ok)
         {
             var b = _bookings.FirstOrDefault(x => x.Id == id);
