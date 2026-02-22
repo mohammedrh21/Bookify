@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Bookify.Application.DTO.Service
+﻿namespace Bookify.Application.DTO.Service
 {
     public class ServiceResponse
     {
@@ -13,5 +9,8 @@ namespace Bookify.Application.DTO.Service
         public int Duration { get; set; } // minutes
         public Guid StaffId { get; set; }
         public Guid CategoryId { get; set; }
+        public string CategoryName { get; set; } = default!;
+        public string StaffName { get; set; } = default!;
+        public bool IsDeleted { get; set; }
     }
 }

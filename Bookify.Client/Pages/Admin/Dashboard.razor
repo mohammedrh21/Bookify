@@ -140,7 +140,7 @@
 
     private async Task ApproveBooking(Guid id)
     {
-        if (await BookingService.ApproveAsync(id))
+        if (await BookingService.ConfirmAsync(id))
             UpdateStatus(id, "Approved");
     }
 

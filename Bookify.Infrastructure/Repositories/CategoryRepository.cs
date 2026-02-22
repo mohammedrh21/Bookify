@@ -2,9 +2,6 @@
 using Bookify.Domain.Entities;
 using Bookify.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Bookify.Infrastructure.Repositories
 {
@@ -16,16 +13,26 @@ namespace Bookify.Infrastructure.Repositories
             _db = db;
         }
 
-        public async Task<IEnumerable<Category>> GetAllAsync() => await _db.Categories.Where(x => x.IsActive).AsNoTracking().ToListAsync();
-        public async Task AddAsync(Category category) => await _db.AddAsync(category);
+        public async Task<IEnumerable<Category>> GetAllAsync()
+            => await _db.Categories
+                .Include(c => c.Services)
+                .Where(x => x.IsActive)
+                .AsNoTracking()
+                .ToListAsync();
+
+        public async Task AddAsync(Category category)
+            => await _db.AddAsync(category);
 
         public async Task<Category?> GetByIdAsync(Guid id)
-            => await _db.Categories.FirstOrDefaultAsync(x => x.Id == id);
+            => await _db.Categories
+                .Include(c => c.Services)
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-        public async Task<bool> IsExists(string name) => await _db.Categories.AnyAsync(x => x.Name == name);
+        public async Task<bool> IsExists(string name)
+            => await _db.Categories.AnyAsync(x => x.Name == name);
 
         public async Task SaveChangesAsync()
-                    => await _db.SaveChangesAsync();
+            => await _db.SaveChangesAsync();
 
         public async Task UpdateAsync(Category Category)
         {

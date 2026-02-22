@@ -39,7 +39,7 @@
                 <button @onclick="() => _selectedCategoryId = cat.Id"
                         class="px-4 py-2 rounded-full text-sm font-medium transition-all
                                @(_selectedCategoryId == cat.Id ? "bg-primary-600 text-white shadow-sm" : "bg-gray-100 text-gray-600 hover:bg-primary-50 hover:text-primary-600")">
-                    @cat.Icon @cat.Name
+                    @cat.Name[..1].ToUpper() @cat.Name
                 </button>
             }
         </div>

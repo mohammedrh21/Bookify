@@ -1,4 +1,5 @@
 using Blazored.LocalStorage;
+using Bookify.Client.Models;
 using Bookify.Client.Models.Service;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -9,7 +10,6 @@ namespace Bookify.Client.Services;
 public interface IServiceApiService
 {
     Task<List<ServiceModel>> GetAllAsync();
-    Task<List<ServiceModel>> GetByCategoryAsync(Guid categoryId);
     Task<ServiceModel?> GetByIdAsync(Guid id);
     Task<bool> CreateAsync(ServiceModel model);
     Task<bool> UpdateAsync(ServiceModel model);
@@ -31,20 +31,15 @@ public class ServiceApiService(HttpClient http, ILocalStorageService localStorag
     public async Task<List<ServiceModel>> GetAllAsync()
     {
         await SetAuthHeader();
-        return await http.GetFromJsonAsync<List<ServiceModel>>("api/services") ?? [];
-    }
-
-    public async Task<List<ServiceModel>> GetByCategoryAsync(Guid categoryId)
-    {
-        await SetAuthHeader();
-        return await http.GetFromJsonAsync<List<ServiceModel>>(
-            $"api/services?categoryId={categoryId}") ?? [];
+        var response = await http.GetFromJsonAsync<ApiResponse<List<ServiceModel>>>("api/services");
+        return response?.Data ?? [];
     }
 
     public async Task<ServiceModel?> GetByIdAsync(Guid id)
     {
         await SetAuthHeader();
-        return await http.GetFromJsonAsync<ServiceModel>($"api/services/{id}");
+        var response = await http.GetFromJsonAsync<ApiResponse<ServiceModel>>($"api/services/{id}");
+        return response?.Data;
     }
 
     public async Task<bool> CreateAsync(ServiceModel model)

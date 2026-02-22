@@ -1,4 +1,5 @@
 using Blazored.LocalStorage;
+using Bookify.Client.Models;
 using Bookify.Client.Models.Category;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -11,7 +12,7 @@ public interface ICategoryService
     Task<List<CategoryModel>> GetAllAsync();
     Task<CategoryModel?> GetByIdAsync(Guid id);
     Task<bool> CreateAsync(CategoryModel model);
-    Task<bool> DeleteAsync(Guid id);
+    Task<bool> DeactivateAsync(Guid id);
 }
 
 // ── Implementation ───────────────────────────────────────────────────────────
@@ -29,26 +30,31 @@ public class CategoryService(HttpClient http, ILocalStorageService localStorage)
     public async Task<List<CategoryModel>> GetAllAsync()
     {
         await SetAuthHeader();
-        return await http.GetFromJsonAsync<List<CategoryModel>>("api/categories") ?? [];
+        var response = await http.GetFromJsonAsync<ApiResponse<List<CategoryModel>>>("api/categories");
+        return response?.Data ?? [];
     }
 
     public async Task<CategoryModel?> GetByIdAsync(Guid id)
     {
         await SetAuthHeader();
-        return await http.GetFromJsonAsync<CategoryModel>($"api/categories/{id}");
+        var response = await http.GetFromJsonAsync<ApiResponse<CategoryModel>>($"api/categories/{id}");
+        return response?.Data;
     }
 
     public async Task<bool> CreateAsync(CategoryModel model)
     {
         await SetAuthHeader();
-        var response = await http.PostAsJsonAsync("api/categories", model);
+        var response = await http.PostAsJsonAsync("api/categories", new { model.Name });
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    /// <summary>
+    /// Uses PATCH /api/categories/{id}/deactivate (the API's soft-delete).
+    /// </summary>
+    public async Task<bool> DeactivateAsync(Guid id)
     {
         await SetAuthHeader();
-        var response = await http.DeleteAsync($"api/categories/{id}");
+        var response = await http.PatchAsync($"api/categories/{id}/deactivate", null);
         return response.IsSuccessStatusCode;
     }
 }
