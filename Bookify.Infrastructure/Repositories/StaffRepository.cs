@@ -1,6 +1,7 @@
 ﻿using Bookify.Application.Interfaces.Staff;
 using Bookify.Domain.Entities;
 using Bookify.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -21,6 +22,7 @@ namespace Bookify.Infrastructure.Repositories
             _db.Staffs.Add(staff);
             await _db.SaveChangesAsync();
         }
+
     }
 
 }

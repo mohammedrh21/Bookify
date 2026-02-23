@@ -1,4 +1,5 @@
 ﻿
+
 namespace Bookify.Application.Interfaces.Staff
 {
     public interface IStaffRepository

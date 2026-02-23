@@ -38,14 +38,15 @@ public class AuthService(
 
         var login = result.Data;
 
-        await localStorage.SetItemAsync("access_token",  login.AccessToken);
+        await localStorage.SetItemAsync("access_token", login.AccessToken);
         await localStorage.SetItemAsync("refresh_token", login.RefreshToken);
-        await localStorage.SetItemAsync("user_name",     login.FullName);
-        await localStorage.SetItemAsync("user_role",     login.Role);
-        await localStorage.SetItemAsync("user_id",       login.UserId.ToString());
+        await localStorage.SetItemAsync("user_name", login.FullName);
+        await localStorage.SetItemAsync("user_role", login.Role);
+        await localStorage.SetItemAsync("user_id", login.UserId.ToString());
+       
 
-        ((BookifyAuthStateProvider)authStateProvider)
-            .NotifyUserAuthenticated(login.AccessToken);
+            ((BookifyAuthStateProvider)authStateProvider)
+                .NotifyUserAuthenticated(login.AccessToken);
 
         return (true, null);
     }

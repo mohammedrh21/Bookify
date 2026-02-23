@@ -1,8 +1,9 @@
 ﻿using AutoMapper;
 using Bookify.Application.Common;
-using Bookify.Application.DTO;
 using Bookify.Application.DTO.Booking;
 using Bookify.Application.Interfaces;
+using Bookify.Application.Interfaces.Client;
+using Bookify.Domain.Contracts;
 using Bookify.Domain.Contracts.Booking;
 using Bookify.Domain.Entities;
 using Bookify.Domain.Enums;
@@ -21,11 +22,11 @@ namespace Bookify.Application.Services
         private readonly IBookingRepository _bookingRepo;
         private readonly IMapper _mapper;
         private readonly IAppLogger<BookingService> _logger;
-
         public BookingService(
             IBookingRepository bookingRepo,
             IMapper mapper,
-            IAppLogger<BookingService> logger)
+            IAppLogger<BookingService> logger,
+            IGenericRepository<Client> genericRepo)
         {
             _bookingRepo = bookingRepo;
             _mapper = mapper;

@@ -9,10 +9,12 @@ using Bookify.Application.Interfaces.Staff;
 using Bookify.Application.Mapping;
 using Bookify.Application.Services;
 using Bookify.Application.Validators;
+using Bookify.Domain.Contracts;
 using Bookify.Domain.Contracts.Booking;
 using Bookify.Domain.Contracts.Category;
 using Bookify.Domain.Contracts.RefreshToken;
 using Bookify.Domain.Contracts.Service;
+using Bookify.Domain.Entities;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Identity;
 using Bookify.Infrastructure.Identity.Entity;
@@ -214,6 +216,7 @@ public static class DependencyInjection
         services.AddScoped<IServiceService, ServiceService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IGenericRepository<Client>, GenericRepository<Client>>();
     }
 
     // ============================

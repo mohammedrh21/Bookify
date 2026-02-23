@@ -13,12 +13,6 @@ namespace Bookify.Domain.Entities
         [Key]
         public Guid Id { get; set; }
 
-        /// <summary>
-        /// FK to AspNetUsers table (Identity)
-        /// </summary>
-        [Required]
-        public string IdentityUserId { get; set; } = default!;
-
         [Required]
         public string FullName { get; set; } = default!;
 

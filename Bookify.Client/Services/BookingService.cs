@@ -28,7 +28,7 @@ public class BookingService(HttpClient http, ILocalStorageService localStorage)
         var token = await localStorage.GetItemAsync<string>("access_token");
         if (!string.IsNullOrEmpty(token))
             http.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
+                new AuthenticationHeaderValue("Bearer",token);
     }
 
     public async Task<List<BookingModel>> GetClientBookingsAsync(Guid clientId)

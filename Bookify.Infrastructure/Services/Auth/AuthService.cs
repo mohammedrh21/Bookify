@@ -42,8 +42,7 @@ namespace Bookify.Infrastructure.Services.Auth
 
             var client = new Client
             {
-                Id = Guid.NewGuid(),
-                IdentityUserId = identityUser.Data!,
+                Id = (Guid)identityUser.Id,
                 FullName = request.FullName,
                 Phone = request.Phone,
                 DateOfBirth = request.DateOfBirth
@@ -64,8 +63,7 @@ namespace Bookify.Infrastructure.Services.Auth
 
             var staff = new Staff
             {
-                Id = Guid.NewGuid(),
-                IdentityUserId = identityUser.Data!,
+                Id = (Guid)identityUser.Id,
                 FullName = request.FullName,
                 Phone = request.Phone
             };
@@ -106,7 +104,7 @@ namespace Bookify.Infrastructure.Services.Auth
 
             await _userManager.AddToRoleAsync(user, role);
 
-            return ServiceResponse<string>.Ok(user.Id, "User created successfully");
+            return ServiceResponse<string>.Ok(id:Guid.Parse(user.Id),data: user.Id, message:"User created successfully");
         }
 
         public async Task<ServiceResponse<LoginResponse>> LoginAsync(LoginRequest request)
@@ -138,7 +136,6 @@ namespace Bookify.Infrastructure.Services.Auth
 
             // Get user roles
             var roles = await _userManager.GetRolesAsync(identityUser);
-
             // Generate access token
             var accessToken = await _jwtTokenGenerator.GenerateTokenAsync(jwtUser, roles);
 
@@ -169,7 +166,7 @@ namespace Bookify.Infrastructure.Services.Auth
                     Role = roles.FirstOrDefault() ?? "User",
                     UserId = Guid.Parse(identityUser.Id),
                     FullName = identityUser.FullName ?? identityUser.UserName ?? string.Empty,
-                    Email = identityUser.Email ?? string.Empty
+                    Email = identityUser.Email ?? string.Empty,
                 },
                 "Login successful");
         }
