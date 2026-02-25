@@ -11,6 +11,11 @@ namespace Bookify.Domain.Rules
             return price > 0;
         }
 
+        public static bool IsValidWorkingInterval(int timeStart, int timeEnd)
+        {
+            return timeStart < timeEnd;
+        }
+
         public static bool IsValidDuration(int durationInMinutes)
         {
             return durationInMinutes is >= 30 and <= 480;

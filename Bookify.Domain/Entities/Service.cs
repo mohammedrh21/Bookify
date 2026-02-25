@@ -16,7 +16,13 @@ namespace Bookify.Domain.Entities
         public string Description { get; set; } = default!;
 
         [Required]
-        public int Duration { get; set; }     // Minutes
+        public int Duration { get; set; }  // Minutes
+
+        [Required]
+        public int TimeStart { get; set; } // 24 hours format -- service time available 
+
+        [Required]
+        public int TimeEnd { get; set; } // 24 hours format  -- service time available 
 
         [Required]
         public decimal Price { get; set; }
