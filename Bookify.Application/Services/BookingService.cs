@@ -67,7 +67,7 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Booking created: {booking.Id}");
 
-            return ServiceResponse<Guid>.Ok(booking.Id, "Booking created successfully.");
+            return ServiceResponse<Guid>.Ok(data:booking.Id, message:"Booking created successfully.",id:booking.Id);
         }
 
         /// <summary>Cancels a booking (client or staff may cancel).</summary>
@@ -103,7 +103,7 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Booking cancelled: {booking.Id}");
 
-            return ServiceResponse<bool>.Ok(true, "Booking cancelled successfully.");
+            return ServiceResponse<bool>.Ok(data:true, "Booking cancelled successfully.",id:booking.Id);
         }
 
         /// <summary>Confirms a pending booking (staff action).</summary>
@@ -126,7 +126,7 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Booking confirmed: {booking.Id}");
 
-            return ServiceResponse<bool>.Ok(true, "Booking confirmed successfully.");
+            return ServiceResponse<bool>.Ok(true, "Booking confirmed successfully.",id:booking.Id);
         }
 
         /// <summary>Marks a booking as completed (staff action).</summary>
@@ -149,7 +149,7 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Booking completed: {booking.Id}");
 
-            return ServiceResponse<bool>.Ok(true, "Booking completed successfully.");
+            return ServiceResponse<bool>.Ok(true, "Booking completed successfully.",id:booking.Id);
         }
 
         // ─────────────────────────────────────────────
