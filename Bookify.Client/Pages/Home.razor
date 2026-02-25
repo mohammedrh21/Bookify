@@ -9,7 +9,7 @@
         <div class="max-w-7xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-10 items-center">
 
             <div class="animate-fadeIn">
-                <h1 class="text-5xl font-extrabold text-slate-800 leading-tight">
+                <h1 class="outline-none text-5xl font-extrabold text-slate-800 leading-tight">
                     Publish Your Services.<br />
                     Get Booked Instantly.
                 </h1>
@@ -210,7 +210,7 @@
         else
         {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                @foreach (var svc in _services.Take(8))
+                @foreach (var svc in _services.Where(x=>!x.IsDeleted).Take(8))
                 {
                     <ServiceCard Service="svc" />
                 }

@@ -1,6 +1,7 @@
-@inject IAuthService AuthService
+﻿@inject IAuthService AuthService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ILocalStorageService localStorage
 
 <nav class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,45 +26,61 @@
                     Home
                 </NavLink>
 
-                <NavLink href="/services"
-                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                         ActiveClass="text-primary-600 font-semibold">
-                    Services
-                </NavLink>
+                <AuthorizeView Roles="Admin,Client,Staff">
+                    <Authorized>
+                        <AuthorizeView Roles="Client">
+                            <Authorized Context="clientUser">
+                                <NavLink href="/services"
+                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                         ActiveClass="text-primary-600 font-semibold">
+                                    Services
+                                </NavLink>
 
-                <NavLink href="/about"
-                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                         ActiveClass="text-primary-600 font-semibold">
-                    About
-                </NavLink>
+                                <NavLink href="/about"
+                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                         ActiveClass="text-primary-600 font-semibold">
+                                    About
+                                </NavLink>
 
-                <NavLink href="/contact-us"
-                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                         ActiveClass="text-primary-600 font-semibold">
-                    Contact Us
-                </NavLink>
+                                <NavLink href="/contact-us"
+                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                         ActiveClass="text-primary-600 font-semibold">
+                                    Contact Us
+                                </NavLink>
 
-                <NavLink href="/faq"
-                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                         ActiveClass="text-primary-600 font-semibold">
-                    FAQs
-                </NavLink>
-
-                <AuthorizeView>
-                    <Authorized Context="authUser">
-
-                        <NavLink href="/my-bookings"
-                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                 ActiveClass="text-primary-600 font-semibold">
-                            My Bookings
-                        </NavLink>
+                                <NavLink href="/faq"
+                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                         ActiveClass="text-primary-600 font-semibold">
+                                    FAQs
+                                </NavLink>
+                                <NavLink href="/my-bookings"
+                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                         ActiveClass="text-primary-600 font-semibold">
+                                    My Bookings
+                                </NavLink>
+                            </Authorized>
+                        </AuthorizeView>
 
                         <AuthorizeView Roles="Admin">
                             <Authorized Context="adminUser">
                                 <NavLink href="/admin/dashboard"
-                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                         class="text-gray-900 hover:text-alert-800 hover:bg-primary-950 font-medium text-sm transition-colors"
                                          ActiveClass="text-primary-600 font-semibold">
                                     Dashboard
+                                </NavLink>
+                            </Authorized>
+                        </AuthorizeView>
+                        <AuthorizeView Roles="Staff">
+                            <Authorized Context="staffUser">
+                                <NavLink href="/services/my-service"
+                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                         ActiveClass="text-primary-600 font-semibold">
+                                    My Service
+                                </NavLink>
+                                <NavLink href="/booking/service-bookings"
+                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                         ActiveClass="text-primary-600 font-semibold">
+                                    Booking History
                                 </NavLink>
                             </Authorized>
                         </AuthorizeView>
@@ -92,10 +109,32 @@
                                 </div>
                             }
                         </div>
-
                     </Authorized>
 
                     <NotAuthorized>
+                        <NavLink href="/services"
+                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                 ActiveClass="text-primary-600 font-semibold">
+                            Services
+                        </NavLink>
+
+                        <NavLink href="/about"
+                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                 ActiveClass="text-primary-600 font-semibold">
+                            About
+                        </NavLink>
+
+                        <NavLink href="/contact-us"
+                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                 ActiveClass="text-primary-600 font-semibold">
+                            Contact Us
+                        </NavLink>
+
+                        <NavLink href="/faq"
+                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
+                                 ActiveClass="text-primary-600 font-semibold">
+                            FAQs
+                        </NavLink>
                         <a href="/login"
                            class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors">
                             Log in
@@ -133,13 +172,16 @@
                 <a href="/" class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">Home</a>
                 <a href="/services" class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">Services</a>
 
-                <AuthorizeView>
+                <AuthorizeView Roles="Admin,Staff,Client">
                     <Authorized Context="authUserMobile">
-
-                        <a href="/my-bookings"
-                           class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
-                            My Bookings
-                        </a>
+                        <AuthorizeView Roles="Client">
+                            <Authorized Context="clientUserMobile">
+                                <a href="/my-bookings"
+                                   class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
+                                    My Bookings
+                                </a>
+                            </Authorized>
+                        </AuthorizeView>
 
                         <AuthorizeView Roles="Admin">
                             <Authorized Context="adminUserMobile">
@@ -150,6 +192,18 @@
                             </Authorized>
                         </AuthorizeView>
 
+                        <AuthorizeView Roles="Staff">
+                            <Authorized Context="staffUserMobile">
+                                <a href="/services/my-service"
+                                   class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
+                                    My Service
+                                </a>
+                                <a href="/booking/service-bookings"
+                                   class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
+                                    Booking History
+                                </a>
+                            </Authorized>
+                        </AuthorizeView>
                         <button @onclick="Logout"
                                 class="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl">
                             Logout
@@ -181,9 +235,7 @@
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        _userName = authState.User.FindFirst("name")?.Value
-                    ?? authState.User.FindFirst("unique_name")?.Value
-                    ?? "User";
+        _userName = await localStorage.GetItemAsync<string>("user_name") ?? "User";
     }
 
     private void ToggleMenu() => _menuOpen = !_menuOpen;

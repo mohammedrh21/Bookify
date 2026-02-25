@@ -1,6 +1,7 @@
 using Bookify.API.Middleware;
 using Bookify.Application.Interfaces;
 using Bookify.Infrastructure;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Serilog;
 using System.Text.Json.Serialization;
@@ -35,6 +36,8 @@ builder.Services.AddControllers()
     {
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         opt.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        opt.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter());
     });
 
 builder.AddServiceDefaults();
