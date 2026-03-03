@@ -22,6 +22,19 @@ namespace Bookify.API.Controllers
             _service = service;
         }
 
+        /// <summary>Get a service by Staff ID.</summary>
+        /// <response code="200">Service found.</response>
+        /// <response code="404">Service not found or deleted.</response>
+        [HttpGet("staff/{staffId:guid}")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetByStaffId(Guid staffId)
+        {
+            var result = await _service.GetByStaffIdAsync(staffId);
+            return Ok(result);
+        }
+
         /// <summary>Get a service by ID.</summary>
         /// <response code="200">Service found.</response>
         /// <response code="404">Service not found or deleted.</response>
@@ -51,13 +64,16 @@ namespace Bookify.API.Controllers
         /// <response code="409">Duplicate service name for this staff.</response>
         /// <response code="422">Business rule violation.</response>
         [HttpPost]
-        [Authorize(Policy = "StaffOrAdmin")]
+        [Authorize(Policy = "StaffOnly")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public async Task<IActionResult> Create([FromBody] CreateServiceRequest request)
         {
+            if (request.StaffId != CurrentUserGuid)
+                return Forbid();
+
             var result = await _service.CreateAsync(request);
             return CreatedAtAction(
                 nameof(GetById),
@@ -65,23 +81,22 @@ namespace Bookify.API.Controllers
                 result);
         }
 
-        /// <summary>Update an existing service (Staff or Admin).</summary>
+        /// <summary>Update an existing service (Staff).</summary>
         /// <response code="200">Service updated.</response>
         /// <response code="404">Service not found.</response>
         /// <response code="422">Business rule violation.</response>
-        [HttpPut("{id:guid}")]
-        [Authorize(Policy = "StaffOrAdmin")]
+        [HttpPut]
+        [Authorize(Policy = "StaffOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateServiceRequest request)
+        public async Task<IActionResult> Update([FromBody] UpdateServiceRequest request)
         {
-            request.Id = id;
             var result = await _service.UpdateAsync(request);
             return Ok(result);
         }
 
-        /// <summary>Soft-delete a service (Staff or Admin).</summary>
+        /// <summary>Soft-delete a service (Staff Admin).</summary>
         /// <response code="200">Service deleted.</response>
         /// <response code="404">Service not found.</response>
         /// <response code="422">Service has active bookings.</response>

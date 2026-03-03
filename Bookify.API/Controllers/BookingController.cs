@@ -1,6 +1,7 @@
 ﻿using Bookify.Application.Common;
 using Bookify.Application.DTO.Booking;
 using Bookify.Application.Interfaces;
+using Bookify.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -38,11 +39,11 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> Create([FromBody] CreateBookingRequest request)
         {
             // Clients can only create bookings for themselves
-            if (!IsAdmin && request.ClientId.ToString() != CurrentUserId)
-                return Forbid();
+            if (IsClient && request.ClientId.ToString() != CurrentUserId)
+                throw new ForbiddenException("Clients only can book service");
 
             var result = await _bookingService.CreateAsync(request);
-            return CreatedAtAction(nameof(GetClientBookings), new { clientId = request.ClientId }, result);
+            return Ok(result);
         }
 
         /// <summary>Cancel a booking (Client or Staff).</summary>
