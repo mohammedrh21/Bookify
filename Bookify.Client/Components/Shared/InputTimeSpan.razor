@@ -1,0 +1,24 @@
+﻿<input type="time"
+       value="@CurrentValueAsString"
+       @onchange="OnChange"
+       class="@CssClass" />
+
+@code {
+    [Parameter]
+    public string? CssClass { get; set; } = "w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none text-sm";
+
+    [Parameter] public TimeSpan Value { get; set; }
+    [Parameter] public EventCallback<TimeSpan> ValueChanged { get; set; }
+
+    private string CurrentValueAsString
+        => Value.ToString(@"hh\:mm");
+
+    private async Task OnChange(ChangeEventArgs e)
+    {
+        if (TimeSpan.TryParse(e.Value?.ToString(), out var ts))
+        {
+            Value = ts;
+            await ValueChanged.InvokeAsync(Value);
+        }
+    }
+}

@@ -40,8 +40,6 @@
         }
     </div>
 
-    <AlertMessage Message="@_message" Type="@_messageType" />
-
     @if (_loading)
     {
         <LoadingSpinner Message="Loading bookings..." />
@@ -93,8 +91,6 @@
     private List<BookingModel> _bookings = [];
     private bool _loading = true;
     private string _activeTab = "All";
-    private string _message = string.Empty;
-    private string _messageType = "info";
 
     private readonly string[] _tabs = ["All", "Pending", "Approved", "Completed", "Cancelled"];
 
@@ -109,7 +105,10 @@
     {
         var userId = await AuthService.GetUserIdAsync();
         if (userId.HasValue)
-            _bookings = await BookingService.GetClientBookingsAsync(userId.Value);
+        {
+            var result = await BookingService.GetClientBookingsAsync(userId.Value);
+            _bookings = result.Data ?? [];
+        }
         _loading = false;
     }
 
@@ -139,18 +138,11 @@
         var userId = await AuthService.GetUserIdAsync();
         if (userId is null) return;
 
-        var ok = await BookingService.CancelAsync(id, userId.Value, "Client");
-        if (ok)
+        var result = await BookingService.CancelAsync(id, userId.Value, "Client");
+        if (result.Success)
         {
             var b = _bookings.FirstOrDefault(x => x.Id == id);
             if (b is not null) b.Status = "Cancelled";
-            _message = "Booking cancelled successfully.";
-            _messageType = "success";
-        }
-        else
-        {
-            _message = "Failed to cancel booking. Please try again.";
-            _messageType = "error";
         }
         StateHasChanged();
     }

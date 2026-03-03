@@ -19,8 +19,6 @@
         </button>
     </div>
 
-    <AlertMessage Message="@_message" Type="@_msgType" />
-
     @if (_showForm)
     {
         <div class="bg-white rounded-2xl border border-primary-200 p-6 mb-6 shadow-sm">
@@ -89,12 +87,11 @@
     private bool                _loading          = true;
     private bool                _showForm         = false;
     private bool                _saving           = false;
-    private string              _message          = string.Empty;
-    private string              _msgType          = "info";
 
     protected override async Task OnInitializedAsync()
     {
-        _categories = await CategoryService.GetAllAsync();
+        var result = await CategoryService.GetAllAsync();
+        _categories = result.Data ?? [];
         _loading    = false;
     }
 
@@ -105,18 +102,13 @@
         _saving = true;
         StateHasChanged();
 
-        if (await CategoryService.CreateAsync(new CategoryModel { Name = _newCategoryName.Trim() }))
+        var result = await CategoryService.CreateAsync(new CategoryModel { Name = _newCategoryName.Trim() });
+        if (result.Success)
         {
-            _categories      = await CategoryService.GetAllAsync();
+            var refresh = await CategoryService.GetAllAsync();
+            _categories      = refresh.Data ?? [];
             _newCategoryName = string.Empty;
             _showForm        = false;
-            _message         = "Category created successfully.";
-            _msgType         = "success";
-        }
-        else
-        {
-            _message = "Failed to create category.";
-            _msgType = "error";
         }
 
         _saving = false;
@@ -124,11 +116,11 @@
 
     private async Task DeactivateCategory(Guid id)
     {
-        if (await CategoryService.DeactivateAsync(id))
+        var result = await CategoryService.DeactivateAsync(id);
+        if (result.Success)
         {
-            _categories = await CategoryService.GetAllAsync();
-            _message    = "Category deactivated.";
-            _msgType    = "warning";
+            var refresh = await CategoryService.GetAllAsync();
+            _categories = refresh.Data ?? [];
         }
     }
 }

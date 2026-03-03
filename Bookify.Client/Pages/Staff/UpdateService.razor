@@ -1,0 +1,82 @@
+﻿@page "/services/edit-service/{Id:guid}"
+@attribute [Authorize(Roles = "Staff")]
+
+@inject IServiceApiService ServiceService
+@inject ICategoryService CategoryService
+@inject NavigationManager Nav
+
+<PageTitle>Edit Service — Bookify</PageTitle>
+
+<div class="max-w-5xl mx-auto px-4 py-10">
+
+    <h1 class="text-3xl font-bold mb-8">Edit Service</h1>
+
+    @if (_loading)
+    {
+        <LoadingSpinner Message="Loading service..." />
+    }
+    else
+    {
+        <div class="bg-white shadow-2xl p-12 w-full max-w-7xl mx-auto">
+            @if (_model != null)
+            {
+                <EditForm Model="_model" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-red-600 mb-6" />
+
+                    <!-- ServiceForm container -->
+                    <div class="mb-8">
+                        <ServiceForm Model="_model" Categories="_categories" />
+                    </div>
+
+                    <div class="flex justify-end gap-4 mt-8">
+                        <button type="button"
+                                @onclick=@(() => Nav.NavigateTo("/services/my-service"))
+                                class="px-5 py-2 border rounded-xl hover:bg-gray-100 transition">
+                            Cancel
+                        </button>
+
+                        <button type="submit"
+                                class="px-7 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2">
+                            <i class="fas fa-save"></i>
+                            Update Service
+                        </button>
+                    </div>
+                </EditForm>
+            }
+            else
+            {
+                <EmptyState Icon="⚠️" Title="Service Not Found" Message="Could not load the requested service." ActionHref="/services/my-service" ActionLabel="Back to Services" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ServiceModel? _model = new();
+    private ServiceModel _modelUpdate = new();
+
+    private List<CategoryModel> _categories = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var svcResult  = await ServiceService.GetByIdAsync(Id);
+        _model         = svcResult.Data;
+        var catResult  = await CategoryService.GetAllAsync();
+        _categories    = catResult.Data ?? [];
+        _loading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (_model != null)
+            _modelUpdate = _model;
+
+        var result = await ServiceService.UpdateAsync(_modelUpdate);
+        if (result.Success)
+            Nav.NavigateTo("/services/my-service");
+    }
+}

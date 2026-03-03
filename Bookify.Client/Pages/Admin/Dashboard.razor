@@ -132,22 +132,23 @@
     {
         var bookTask  = BookingService.GetAllBookingsAsync();
         var svcTask   = ServiceService.GetAllAsync();
-        _bookings     = await bookTask;
-        var svcs      = await svcTask;
-        _serviceCount = svcs.Count(s => !s.IsDeleted);
+        var bookResult = await bookTask;
+        var svcResult  = await svcTask;
+        _bookings     = bookResult.Data ?? [];
+        _serviceCount = (svcResult.Data ?? []).Count(s => !s.IsDeleted);
         _loading      = false;
     }
 
     private async Task ApproveBooking(Guid id)
     {
-        if (await BookingService.ConfirmAsync(id))
-            UpdateStatus(id, "Approved");
+        var result = await BookingService.ConfirmAsync(id);
+        if (result.Success) UpdateStatus(id, "Approved");
     }
 
     private async Task CompleteBooking(Guid id)
     {
-        if (await BookingService.CompleteAsync(id))
-            UpdateStatus(id, "Completed");
+        var result = await BookingService.CompleteAsync(id);
+        if (result.Success) UpdateStatus(id, "Completed");
     }
 
     private void UpdateStatus(Guid id, string status)

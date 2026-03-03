@@ -1,8 +1,8 @@
 @page "/book/{ServiceId:guid}"
 @attribute [Authorize]
-@inject IServiceApiService  ServiceService
-@inject IBookingService     BookingService
-@inject NavigationManager   Nav
+@inject IServiceApiService ServiceService
+@inject IBookingService BookingService
+@inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Book Service — Bookify</PageTitle>
@@ -53,9 +53,6 @@
         <div class="bg-white rounded-2xl border border-gray-100 p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-5">Select Date & Time</h2>
 
-            <AlertMessage Message="@_error"   Type="error" />
-            <AlertMessage Message="@_success" Type="success" />
-
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Date</label>
@@ -99,16 +96,15 @@
     [Parameter] public Guid ServiceId { get; set; }
 
     private ServiceModel? _service;
-    private bool          _loading      = true;
-    private bool          _booking      = false;
-    private string        _error        = string.Empty;
-    private string        _success      = string.Empty;
-    private DateTime      _selectedDate = DateTime.Today.AddDays(1);
-    private TimeSpan      _selectedTime = new TimeSpan(9, 0, 0);
+    private bool _loading = true;
+    private bool _booking = false;
+    private DateTime _selectedDate = DateTime.Today.AddDays(1);
+    private TimeSpan _selectedTime = new TimeSpan(9, 0, 0);
 
     protected override async Task OnInitializedAsync()
     {
-        _service = await ServiceService.GetByIdAsync(ServiceId);
+        var result = await ServiceService.GetByIdAsync(ServiceId);
+        _service = result.Data;
         _loading = false;
     }
 
@@ -126,50 +122,40 @@
 
     private async Task HandleBooking()
     {
-        _error = _success = string.Empty;
-
         if (_selectedDate <= DateTime.Today)
-        {
-            _error = "Please select a future date.";
             return;
-        }
 
         _booking = true;
         StateHasChanged();
 
-        var authState   = await AuthStateProvider.GetAuthenticationStateAsync();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var clientIdStr = authState.User.FindFirst("sub")?.Value
                        ?? authState.User.FindFirst("nameid")?.Value;
 
         if (!Guid.TryParse(clientIdStr, out var clientId))
         {
-            _error   = "Authentication error. Please log in again.";
             _booking = false;
             return;
         }
 
         var request = new CreateBookingRequest
         {
-            ClientId  = clientId,
+            ClientId = clientId,
             ServiceId = _service!.Id,
-            StaffId   = _service.StaffId,
-            Date      = _selectedDate,
-            Time      = _selectedTime
+            StaffId = _service.StaffId,
+            Date = _selectedDate,
+            Time = _selectedTime
         };
 
-        var id = await BookingService.CreateAsync(request);
+        var result = await BookingService.CreateAsync(request);
 
-        if (id.HasValue)
+        if (result.Success)
         {
-            _success = "🎉 Booking confirmed! Redirecting...";
             StateHasChanged();
-            await Task.Delay(1500);
+            await Task.Delay(1400);
             Nav.NavigateTo("/my-bookings");
         }
         else
-        {
-            _error   = "This time slot may already be taken. Please try a different time.";
             _booking = false;
-        }
     }
 }

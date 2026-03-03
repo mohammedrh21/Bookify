@@ -19,8 +19,6 @@
         </button>
     </div>
 
-    <AlertMessage Message="@_message" Type="@_msgType" />
-
     <!-- Create / Edit Form -->
     @if (_showForm)
     {
@@ -47,7 +45,7 @@
                 <div class="sm:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea @bind="_editModel.Description" rows="2"
-                              class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none"></textarea>
+                          class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none"></textarea>
                 </div>
             </div>
             <div class="flex gap-3 mt-4">
@@ -106,18 +104,17 @@
 </div>
 
 @code {
-    private List<ServiceModel> _services  = [];
-    private ServiceModel       _editModel = new();
-    private bool               _loading   = true;
-    private bool               _showForm  = false;
-    private bool               _saving    = false;
-    private string             _message   = string.Empty;
-    private string             _msgType   = "info";
+    private List<ServiceModel> _services = [];
+    private ServiceModel _editModel = new();
+    private bool _loading = true;
+    private bool _showForm = false;
+    private bool _saving = false;
 
     protected override async Task OnInitializedAsync()
     {
-        _services = await ServiceService.GetAllAsync();
-        _loading  = false;
+        var result = await ServiceService.GetAllAsync();
+        _services = result.Data ?? [];
+        _loading = false;
     }
 
     private void ShowCreateForm() { _editModel = new(); _showForm = true; }
@@ -126,15 +123,15 @@
     {
         _editModel = new ServiceModel
         {
-            Id          = svc.Id,
-            Name        = svc.Name,
+            Id = svc.Id,
+            Name = svc.Name,
             Description = svc.Description,
-            Price       = svc.Price,
-            Duration    = svc.Duration,
-            StaffId     = svc.StaffId,
-            CategoryId  = svc.CategoryId,
-            StartTime = svc.StartTime,
-            EndTime = svc.EndTime
+            Price = svc.Price,
+            Duration = svc.Duration,
+            StaffId = svc.StaffId,
+            CategoryId = svc.CategoryId,
+            TimeStart = svc.TimeStart,
+            TimeEnd = svc.TimeEnd
         };
         _showForm = true;
     }
@@ -144,32 +141,26 @@
         _saving = true;
         StateHasChanged();
 
-        bool ok = _editModel.Id == Guid.Empty
+        var result = _editModel.Id == Guid.Empty
             ? await ServiceService.CreateAsync(_editModel)
             : await ServiceService.UpdateAsync(_editModel);
 
-        if (ok)
+        if (result.Success)
         {
-            _services = await ServiceService.GetAllAsync();
-            _message  = "Service saved successfully.";
-            _msgType  = "success";
+            var refresh = await ServiceService.GetAllAsync();
+            _services = refresh.Data ?? [];
             _showForm = false;
-        }
-        else
-        {
-            _message = "Failed to save. Please try again.";
-            _msgType = "error";
         }
         _saving = false;
     }
 
     private async Task DeleteService(Guid id)
     {
-        if (await ServiceService.DeleteAsync(id))
+        var result = await ServiceService.DeleteAsync(id);
+        if (result.Success)
         {
-            _services = await ServiceService.GetAllAsync();
-            _message  = "Service deleted.";
-            _msgType  = "warning";
+            var refresh = await ServiceService.GetAllAsync();
+            _services = refresh.Data ?? [];
         }
     }
 }

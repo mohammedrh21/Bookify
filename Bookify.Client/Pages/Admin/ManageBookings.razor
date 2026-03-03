@@ -31,8 +31,6 @@
         </select>
     </div>
 
-    <AlertMessage Message="@_message" Type="@_msgType" />
-
     @if (_loading)
     {
         <LoadingSpinner />
@@ -110,8 +108,6 @@
     private bool               _loading      = true;
     private string             _search       = string.Empty;
     private string             _statusFilter = string.Empty;
-    private string             _message      = string.Empty;
-    private string             _msgType      = "info";
 
     private List<BookingModel> Filtered => _bookings
         .Where(b => (string.IsNullOrEmpty(_search) ||
@@ -123,31 +119,33 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _bookings = await BookingService.GetAllBookingsAsync();
+        var result = await BookingService.GetAllBookingsAsync();
+        _bookings = result.Data ?? [];
         _loading  = false;
     }
 
     private async Task Approve(Guid id)
     {
-        if (await BookingService.ConfirmAsync(id)) { UpdateStatus(id, "Approved"); SetMsg("Booking approved.", "success"); }
+        var result = await BookingService.ConfirmAsync(id);
+        if (result.Success) UpdateStatus(id, "Approved");
     }
 
     private async Task Cancel(Guid id)
     {
-        // Admin cancel — requesterId is not used for admin
-        if (await BookingService.CancelAsync(id, Guid.Empty, "Staff")) { UpdateStatus(id, "Cancelled"); SetMsg("Booking cancelled.", "warning"); }
+        var result = await BookingService.CancelAsync(id, Guid.Empty, "Staff");
+        if (result.Success) UpdateStatus(id, "Cancelled");
     }
 
     private async Task Complete(Guid id)
     {
-        if (await BookingService.CompleteAsync(id)) { UpdateStatus(id, "Completed"); SetMsg("Booking completed.", "success"); }
+        var result = await BookingService.CompleteAsync(id);
+        if (result.Success) UpdateStatus(id, "Completed");
     }
 
     private void UpdateStatus(Guid id, string status)
     {
         var b = _bookings.FirstOrDefault(x => x.Id == id);
         if (b is not null) b.Status = status;
+        StateHasChanged();
     }
-
-    private void SetMsg(string msg, string type) { _message = msg; _msgType = type; }
 }
