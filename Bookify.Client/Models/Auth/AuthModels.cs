@@ -15,6 +15,14 @@ public class RegisterRequest
     public DateTime? DateOfBirth { get; set; }
 }
 
+public class RegisterStaffRequest
+{
+    public string FullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+}
+
 /// <summary>
 /// Matches the API's <c>LoginResponse</c> DTO (nested inside <c>ServiceResponse&lt;T&gt;</c>).
 /// </summary>

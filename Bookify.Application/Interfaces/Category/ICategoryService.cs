@@ -16,6 +16,6 @@ namespace Bookify.Application.Interfaces.Category
         // Commands
         Task<ServiceResponse<Guid>> CreateAsync(CreateCategoryRequest request);
         Task<ServiceResponse<Guid>> UpdateAsync(UpdateCategoryRequest request);
-        Task<ServiceResponse<bool>> DeactivateAsync(Guid id);
+        Task<ServiceResponse<Guid>> DeactivateAsync(Guid id);
     }
 }

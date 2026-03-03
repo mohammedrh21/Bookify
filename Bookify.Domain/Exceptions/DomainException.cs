@@ -15,6 +15,14 @@ namespace Bookify.Domain.Exceptions
     }
 
     // ──────────────────────────────────────────
+    // 401 – UnAuthorized
+    // ──────────────────────────────────────────
+    public class UnAuthorizedException : DomainException
+    {
+        public UnAuthorizedException(string id)
+            : base($"User with id '{id}' is not authorized") { }
+    }
+    // ──────────────────────────────────────────
     // 404 – Not Found
     // ──────────────────────────────────────────
 
@@ -74,5 +82,41 @@ namespace Bookify.Domain.Exceptions
     {
         public TimeSlotUnavailableException(DateTime date, TimeSpan time)
             : base($"The time slot on {date:yyyy-MM-dd} at {time:hh\\:mm} is already booked.") { }
+    }
+
+    // ──────────────────────────────────────────
+    // 401 – Invalid Credentials
+    // ──────────────────────────────────────────
+
+    /// <summary>Thrown when login credentials are invalid.</summary>
+    public class InvalidCredentialsException : DomainException
+    {
+        public InvalidCredentialsException()
+            : base("Invalid email or password.") { }
+
+        public InvalidCredentialsException(string message)
+            : base(message) { }
+    }
+
+    // ──────────────────────────────────────────
+    // 423 – User Locked
+    // ──────────────────────────────────────────
+
+    /// <summary>Thrown when the user account is locked out.</summary>
+    public class UserLockedException : DomainException
+    {
+        public UserLockedException()
+            : base("Your account is locked. Please try again later or contact support.") { }
+    }
+
+    // ──────────────────────────────────────────
+    // 400 – Registration Failed
+    // ──────────────────────────────────────────
+
+    /// <summary>Thrown when user registration fails (e.g. Identity validation errors).</summary>
+    public class RegistrationFailedException : DomainException
+    {
+        public RegistrationFailedException(string message)
+            : base(message) { }
     }
 }

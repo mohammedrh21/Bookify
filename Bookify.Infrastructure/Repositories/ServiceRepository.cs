@@ -18,18 +18,23 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(s => s.Staff)
                 .ToListAsync();
 
-        public async Task<Domain.Entities.Service> GetByIdAsync(Guid id)
+        public async Task<Domain.Entities.Service?> GetByIdAsync(Guid id)
             => await _db.Services
                 .Include(s => s.Category)
                 .Include(s => s.Staff)
-                .FirstOrDefaultAsync(s => s.Id == id)
-                ?? throw new KeyNotFoundException("Service not found");
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+        public async Task<Domain.Entities.Service?> GetByStaffIdAsync(Guid staffId)
+            => await _db.Services
+                .Include(s => s.Category)
+                .Include(s => s.Staff)
+                .FirstOrDefaultAsync(s => s.StaffId == staffId);
 
         public async Task UpdateAsync(Domain.Entities.Service service)
             => _db.Services.Update(service);
 
-        public async Task<bool> ExistsAsync(string name, Guid staffId)
-            => await _db.Services.AnyAsync(s => s.Name == name && s.StaffId == staffId);
+        public async Task<bool> ExistsAsync(string name,Guid staffId)
+            => await _db.Services.AnyAsync(s=>s.Name==name && s.StaffId == staffId);
 
         public async Task SaveChangesAsync()
             => await _db.SaveChangesAsync();

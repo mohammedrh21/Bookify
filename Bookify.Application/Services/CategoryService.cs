@@ -128,7 +128,7 @@ namespace Bookify.Application.Services
         /// <summary>Deactivates a category (soft-delete via IsActive flag).</summary>
         /// <exception cref="NotFoundException">When the category does not exist.</exception>
         /// <exception cref="BusinessRuleException">When the category still has active services.</exception>
-        public async Task<ServiceResponse<bool>> DeactivateAsync(Guid id)
+        public async Task<ServiceResponse<Guid>> DeactivateAsync(Guid id)
         {
             _logger.LogInformation($"Deactivating category: {id}");
 
@@ -150,7 +150,7 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Category deactivated: {id}");
 
-            return ServiceResponse<bool>.Ok(true, "Category deactivated successfully.");
+            return ServiceResponse<Guid>.Ok(data: id, id: id, message: "Category deactivated successfully.");
         }
     }
 }

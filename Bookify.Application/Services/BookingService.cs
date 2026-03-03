@@ -67,14 +67,14 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Booking created: {booking.Id}");
 
-            return ServiceResponse<Guid>.Ok(data:booking.Id, message:"Booking created successfully.",id:booking.Id);
+            return ServiceResponse<Guid>.Ok(data: booking.Id, message: "Booking created successfully.", id: booking.Id);
         }
 
         /// <summary>Cancels a booking (client or staff may cancel).</summary>
         /// <exception cref="NotFoundException">When the booking does not exist.</exception>
         /// <exception cref="InvalidBookingTransitionException">When the booking cannot be cancelled from its current status.</exception>
         /// <exception cref="ForbiddenException">When the requester is not the owner or an authorised staff member.</exception>
-        public async Task<ServiceResponse<bool>> CancelAsync(CancelBookingRequest request)
+        public async Task<ServiceResponse<Guid>> CancelAsync(CancelBookingRequest request)
         {
             _logger.LogInformation($"Cancelling booking: {request.BookingId}");
 
@@ -103,13 +103,13 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Booking cancelled: {booking.Id}");
 
-            return ServiceResponse<bool>.Ok(data:true, "Booking cancelled successfully.",id:booking.Id);
+            return ServiceResponse<Guid>.Ok(data: booking.Id, id: booking.Id, message: "Booking cancelled successfully.");
         }
 
         /// <summary>Confirms a pending booking (staff action).</summary>
         /// <exception cref="NotFoundException">When the booking does not exist.</exception>
         /// <exception cref="InvalidBookingTransitionException">When not in a Pending state.</exception>
-        public async Task<ServiceResponse<bool>> ConfirmAsync(Guid bookingId)
+        public async Task<ServiceResponse<Guid>> ConfirmAsync(Guid bookingId)
         {
             _logger.LogInformation($"Confirming booking: {bookingId}");
 
@@ -126,13 +126,13 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Booking confirmed: {booking.Id}");
 
-            return ServiceResponse<bool>.Ok(true, "Booking confirmed successfully.",id:booking.Id);
+            return ServiceResponse<Guid>.Ok(data: booking.Id, id: booking.Id, message: "Booking confirmed successfully.");
         }
 
         /// <summary>Marks a booking as completed (staff action).</summary>
         /// <exception cref="NotFoundException">When the booking does not exist.</exception>
         /// <exception cref="InvalidBookingTransitionException">When not in a Confirmed state.</exception>
-        public async Task<ServiceResponse<bool>> CompleteAsync(Guid bookingId)
+        public async Task<ServiceResponse<Guid>> CompleteAsync(Guid bookingId)
         {
             _logger.LogInformation($"Completing booking: {bookingId}");
 
@@ -149,7 +149,7 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Booking completed: {booking.Id}");
 
-            return ServiceResponse<bool>.Ok(true, "Booking completed successfully.",id:booking.Id);
+            return ServiceResponse<Guid>.Ok(data: booking.Id, id: booking.Id, message: "Booking completed successfully.");
         }
 
         // ─────────────────────────────────────────────

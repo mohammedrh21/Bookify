@@ -15,12 +15,12 @@ namespace Bookify.Application.Interfaces
 
         Task<ServiceResponse<Guid>> CreateAsync(
             CreateBookingRequest request);
-        Task<ServiceResponse<bool>> CancelAsync(
+        Task<ServiceResponse<Guid>> CancelAsync(
             CancelBookingRequest request);
 
-        Task<ServiceResponse<bool>> ConfirmAsync(Guid bookingId);
+        Task<ServiceResponse<Guid>> ConfirmAsync(Guid bookingId);
 
-        Task<ServiceResponse<bool>> CompleteAsync(Guid bookingId);
+        Task<ServiceResponse<Guid>> CompleteAsync(Guid bookingId);
 
         // =============================
         // Queries (Read Only)

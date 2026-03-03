@@ -52,6 +52,19 @@ namespace Bookify.Application.Services
                 data: _mapper.Map<ServiceResponse>(service));
         }
 
+        public async Task<ServiceResponse<ServiceResponse>> GetByStaffIdAsync(Guid staffId)
+        {
+            _logger.LogInformation($"Fetching service by staffId: {staffId}");
+
+            var service = await _repo.GetByStaffIdAsync(staffId);
+
+            if (service is null || service.IsDeleted)
+                throw new NotFoundException(nameof(Service), staffId);
+
+            return ServiceResponse<ServiceResponse>.Ok(
+                data: _mapper.Map<ServiceResponse>(service));
+        }
+
         /// <inheritdoc/>
         public async Task<ServiceResponse<IEnumerable<ServiceResponse>>> GetAllAsync()
         {
@@ -80,15 +93,19 @@ namespace Bookify.Application.Services
             var category = await _categoryRepo.GetByIdAsync(request.CategoryId)
                 ?? throw new NotFoundException("Category", request.CategoryId);
 
+            var existedservice = await _repo.GetByStaffIdAsync(request.StaffId);
+            if (existedservice != null && existedservice.IsDeleted == true)
+                throw new ConflictException("You must wait 14 days for register new service");
+
             if (!category.IsActive)
                 throw new BusinessRuleException("Cannot create a service under an inactive category.");
 
-            // 2. Duplicate check for this staff member
-            if (await _repo.ExistsAsync(request.Name.Trim(), request.StaffId))
+            // Duplicate check for this staff member
+            if (await _repo.ExistsAsync(request.Name, request.StaffId))
                 throw new ConflictException(
                     $"Staff already has a service named '{request.Name}'. Choose a different name.");
 
-            // 3. Domain rule guard
+            //  Domain rule guard
             if (!ServiceRules.CanBeCreated(
                     request.Name, request.Price, request.Duration,
                     request.StaffId, request.CategoryId))
@@ -107,6 +124,8 @@ namespace Bookify.Application.Services
                 Price = request.Price,
                 StaffId = request.StaffId,
                 CategoryId = request.CategoryId,
+                TimeStart = request.TimeStart,
+                TimeEnd = request.TimeEnd,
                 IsDeleted = false
             };
 
@@ -115,13 +134,13 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Service created: {service.Id}");
 
-            return ServiceResponse<Guid>.Ok(service.Id, "Service created successfully.");
+            return ServiceResponse<Guid>.Ok(data: service.Id, id: service.Id, message: "Service created successfully.");
         }
 
         /// <inheritdoc/>
         /// <exception cref="NotFoundException">When the service does not exist or is soft-deleted.</exception>
         /// <exception cref="BusinessRuleException">When updated values violate domain rules.</exception>
-        public async Task<ServiceResponse<bool>> UpdateAsync(UpdateServiceRequest request)
+        public async Task<ServiceResponse<Guid>> UpdateAsync(UpdateServiceRequest request)
         {
             _logger.LogInformation($"Updating service: {request.Id}");
 
@@ -135,7 +154,7 @@ namespace Bookify.Application.Services
                 throw new BusinessRuleException("Service name is invalid (3–100 characters required).");
 
             if (!ServiceRules.IsValidPrice(request.Price))
-                throw new BusinessRuleException("Price must be greater than 0 and at most 100,000.");
+                throw new BusinessRuleException("Price must be greater than 0 and at most 10,000.");
 
             if (!ServiceRules.IsValidDuration(request.Duration))
                 throw new BusinessRuleException("Duration must be between 30 and 480 minutes.");
@@ -144,13 +163,14 @@ namespace Bookify.Application.Services
             service.Description = request.Description?.Trim() ?? service.Description;
             service.Price = request.Price;
             service.Duration = request.Duration;
-
+            service.TimeStart = request.TimeStart;
+            service.TimeEnd = request.TimeEnd;
             await _repo.UpdateAsync(service);
             await _repo.SaveChangesAsync();
 
             _logger.LogInformation($"Service updated: {service.Id}");
 
-            return ServiceResponse<bool>.Ok(true, "Service updated successfully.");
+            return ServiceResponse<Guid>.Ok(data: service.Id, id: service.Id, message: "Service updated successfully.");
         }
 
         /// <summary>
@@ -158,7 +178,7 @@ namespace Bookify.Application.Services
         /// </summary>
         /// <exception cref="NotFoundException">When the service does not exist or is already deleted.</exception>
         /// <exception cref="BusinessRuleException">When there are pending or confirmed bookings tied to this service.</exception>
-        public async Task<ServiceResponse<bool>> DeleteAsync(Guid id)
+        public async Task<ServiceResponse<Guid>> DeleteAsync(Guid id)
         {
             _logger.LogInformation($"Soft-deleting service: {id}");
 
@@ -184,7 +204,7 @@ namespace Bookify.Application.Services
 
             _logger.LogInformation($"Service soft-deleted: {id}");
 
-            return ServiceResponse<bool>.Ok(true, "Service deleted successfully.");
+            return ServiceResponse<Guid>.Ok(data: id, id: id, message: "Service deleted successfully.");
         }
     }
 }
