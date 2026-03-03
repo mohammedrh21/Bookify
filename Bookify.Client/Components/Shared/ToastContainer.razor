@@ -1,0 +1,227 @@
+@using Bookify.Client.Services
+@inject ToastService ToastSvc
+@implements IDisposable
+
+@if (_toasts.Count > 0)
+{
+    <div class="toast-container" role="alert" aria-live="polite" aria-atomic="false">
+        @foreach (var toast in _toasts)
+        {
+            <div class="toast @GetToastClass(toast.Level) @(toast.Removing ? "toast-removing" : "")">
+                <span class="toast-icon">@GetIcon(toast.Level)</span>
+                <div class="toast-body">
+                    <span class="toast-title">@GetTitle(toast.Level)</span>
+                    <span class="toast-message">@toast.Text</span>
+                </div>
+                <button class="toast-close" @onclick="() => Remove(toast)" aria-label="Dismiss">✕</button>
+                <div class="toast-progress @GetProgressClass(toast.Level)"></div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    /* ── Container ─────────────────────────────────── */
+    .toast-container {
+        position: fixed;
+        top: 1.25rem;
+        right: 1.25rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-width: 320px;
+        max-width: 420px;
+        pointer-events: none;
+    }
+
+    /* ── Toast card ────────────────────────────────── */
+    .toast {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem 1rem 0.8rem 1rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
+        background: #fff;
+        border-left: 4px solid #6366f1;
+        pointer-events: all;
+        position: relative;
+        overflow: hidden;
+        animation: toast-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    .toast-removing {
+        animation: toast-out 0.3s ease-in forwards;
+    }
+
+    /* ── Variants ──────────────────────────────────── */
+    .toast-success  { border-left-color: #22c55e; }
+    .toast-error    { border-left-color: #ef4444; }
+    .toast-warning  { border-left-color: #f59e0b; }
+    .toast-info     { border-left-color: #3b82f6; }
+
+    /* ── Icon ──────────────────────────────────────── */
+    .toast-icon {
+        font-size: 1.4rem;
+        line-height: 1;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    /* ── Body ──────────────────────────────────────── */
+    .toast-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .toast-title {
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .toast-success  .toast-title { color: #16a34a; }
+    .toast-error    .toast-title { color: #dc2626; }
+    .toast-warning  .toast-title { color: #d97706; }
+    .toast-info     .toast-title { color: #2563eb; }
+
+    .toast-message {
+        font-size: 0.93rem;
+        color: #374151;
+        word-break: break-word;
+    }
+
+    /* ── Close button ──────────────────────────────── */
+    .toast-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #9ca3af;
+        font-size: 0.85rem;
+        line-height: 1;
+        padding: 2px 4px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        transition: color 0.15s, background 0.15s;
+    }
+
+    .toast-close:hover {
+        color: #374151;
+        background: #f3f4f6;
+    }
+
+    /* ── Progress bar ──────────────────────────────── */
+    .toast-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        border-radius: 0 0 12px 12px;
+        animation: toast-progress 3s linear forwards;
+    }
+
+    .toast-progress-success { background: #22c55e; }
+    .toast-progress-error   { background: #ef4444; }
+    .toast-progress-warning { background: #f59e0b; }
+    .toast-progress-info    { background: #3b82f6; }
+
+    /* ── Animations ────────────────────────────────── */
+    @@keyframes toast-in {
+        from { opacity: 0; transform: translateX(120%) scale(0.9); }
+        to   { opacity: 1; transform: translateX(0)    scale(1);   }
+    }
+
+    @@keyframes toast-out {
+        from { opacity: 1; transform: translateX(0)    scale(1);   }
+        to   { opacity: 0; transform: translateX(120%) scale(0.85); }
+    }
+
+    @@keyframes toast-progress {
+        from { width: 100%; }
+        to   { width: 0%;   }
+    }
+</style>
+
+@code {
+    private readonly List<ToastEntry> _toasts = [];
+    private const int AutoDismissMs = 3000;
+
+    protected override void OnInitialized()
+        => ToastSvc.OnShow += HandleShow;
+
+    private void HandleShow(ToastMessage msg)
+    {
+        var entry = new ToastEntry(msg.Id, msg.Level, msg.Text);
+        InvokeAsync(async () =>
+        {
+            _toasts.Add(entry);
+            StateHasChanged();
+
+            await Task.Delay(AutoDismissMs);
+            await DismissAsync(entry);
+        });
+    }
+
+    private async Task DismissAsync(ToastEntry entry)
+    {
+        if (!_toasts.Contains(entry)) return;
+
+        entry.Removing = true;
+        StateHasChanged();
+
+        await Task.Delay(300); // match toast-out animation
+        _toasts.Remove(entry);
+        StateHasChanged();
+    }
+
+    private void Remove(ToastEntry entry) => _ = DismissAsync(entry);
+
+    private static string GetToastClass(ToastLevel level) => level switch
+    {
+        ToastLevel.Success => "toast-success",
+        ToastLevel.Error   => "toast-error",
+        ToastLevel.Warning => "toast-warning",
+        _                  => "toast-info"
+    };
+
+    private static string GetProgressClass(ToastLevel level) => level switch
+    {
+        ToastLevel.Success => "toast-progress-success",
+        ToastLevel.Error   => "toast-progress-error",
+        ToastLevel.Warning => "toast-progress-warning",
+        _                  => "toast-progress-info"
+    };
+
+    private static string GetIcon(ToastLevel level) => level switch
+    {
+        ToastLevel.Success => "✅",
+        ToastLevel.Error   => "❌",
+        ToastLevel.Warning => "⚠️",
+        _                  => "ℹ️"
+    };
+
+    private static string GetTitle(ToastLevel level) => level switch
+    {
+        ToastLevel.Success => "Success",
+        ToastLevel.Error   => "Error",
+        ToastLevel.Warning => "Warning",
+        _                  => "Info"
+    };
+
+    public void Dispose()
+        => ToastSvc.OnShow -= HandleShow;
+
+    // ── Internal view-model ───────────────────────────
+    private class ToastEntry(Guid id, ToastLevel level, string text)
+    {
+        public Guid Id { get; } = id;
+        public ToastLevel Level { get; } = level;
+        public string Text { get; } = text;
+        public bool Removing { get; set; }
+    }
+}
