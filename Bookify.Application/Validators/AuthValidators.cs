@@ -38,24 +38,23 @@ namespace Bookify.Application.Validators
             RuleFor(x => x.Password)
                 .NotEmpty()
                 .WithMessage("Password is required")
-                .MinimumLength(12)
-                .WithMessage("Password must be at least 12 characters")
+                .MinimumLength(6)
+                .WithMessage("Password must be at least 6 characters")
                 .Matches(@"[A-Z]")
                 .WithMessage("Password must contain at least one uppercase letter")
                 .Matches(@"[a-z]")
                 .WithMessage("Password must contain at least one lowercase letter")
                 .Matches(@"[0-9]")
-                .WithMessage("Password must contain at least one number")
-                .Matches(@"[\W_]")
-                .WithMessage("Password must contain at least one special character");
+                .WithMessage("Password must contain at least one number");
+                
 
             RuleFor(x => x.FullName)
                 .NotEmpty()
                 .WithMessage("Full name is required")
                 .MinimumLength(2)
                 .WithMessage("Full name must be at least 2 characters")
-                .MaximumLength(100)
-                .WithMessage("Full name cannot exceed 100 characters");
+                .MaximumLength(50)
+                .WithMessage("Full name cannot exceed 50 characters");
 
             RuleFor(x => x.Phone)
                 .NotEmpty()
@@ -83,24 +82,22 @@ namespace Bookify.Application.Validators
             RuleFor(x => x.Password)
                 .NotEmpty()
                 .WithMessage("Password is required")
-                .MinimumLength(12)
-                .WithMessage("Password must be at least 12 characters")
+                .MinimumLength(6)
+                .WithMessage("Password must be at least 6 characters")
                 .Matches(@"[A-Z]")
                 .WithMessage("Password must contain at least one uppercase letter")
                 .Matches(@"[a-z]")
                 .WithMessage("Password must contain at least one lowercase letter")
                 .Matches(@"[0-9]")
-                .WithMessage("Password must contain at least one number")
-                .Matches(@"[\W_]")
-                .WithMessage("Password must contain at least one special character");
+                .WithMessage("Password must contain at least one number");
 
             RuleFor(x => x.FullName)
                 .NotEmpty()
                 .WithMessage("Full name is required")
                 .MinimumLength(2)
                 .WithMessage("Full name must be at least 2 characters")
-                .MaximumLength(100)
-                .WithMessage("Full name cannot exceed 100 characters");
+                .MaximumLength(50)
+                .WithMessage("Full name cannot exceed 50 characters");
 
             RuleFor(x => x.Phone)
                 .NotEmpty()

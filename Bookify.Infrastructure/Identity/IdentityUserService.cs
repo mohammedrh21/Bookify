@@ -23,7 +23,7 @@ namespace Bookify.Infrastructure.Identity
             string phone,
             string role)
         {
-            var user = new ApplicationIdentityUser
+            var user = new  ApplicationIdentityUser
             {
                 UserName = email,
                 Email = email,
@@ -38,7 +38,7 @@ namespace Bookify.Infrastructure.Identity
 
             await _userManager.AddToRoleAsync(user, role);
 
-            return ServiceResponse<string>.Ok(user.Id);
+            return ServiceResponse<string>.Ok(user.Id.ToString());
         }
     }
 

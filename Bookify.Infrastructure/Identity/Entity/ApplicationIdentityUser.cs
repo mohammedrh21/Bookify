@@ -5,7 +5,7 @@ namespace Bookify.Infrastructure.Identity.Entity
     /// <summary>
     /// Represents Identity user
     /// </summary>
-    public class ApplicationIdentityUser : IdentityUser
+    public class ApplicationIdentityUser : IdentityUser<Guid>
     {
         public string FullName { get; set; } = string.Empty;
     }

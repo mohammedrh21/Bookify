@@ -86,29 +86,26 @@ public static class DependencyInjection
     // ============================
     private static void AddIdentity(IServiceCollection services)
     {
-        services.AddIdentityCore<ApplicationIdentityUser>(opt =>
-        {
-            // Password settings - Enhanced security
-            opt.Password.RequireDigit = true;
-            opt.Password.RequireNonAlphanumeric = true; // FIXED: Changed from false
-            opt.Password.RequiredLength = 12; // FIXED: Increased from 8
-            opt.Password.RequireLowercase = true;
-            opt.Password.RequireUppercase = true;
+        services
+            .AddIdentity<ApplicationIdentityUser, IdentityRole<Guid>>(opt =>
+            {
+                opt.Password.RequireDigit = true;
+                opt.Password.RequireNonAlphanumeric = false;
+                opt.Password.RequiredLength = 6;
+                opt.Password.RequireLowercase = true;
+                opt.Password.RequireUppercase = true;
 
-            // User settings
-            opt.User.RequireUniqueEmail = true; // FIXED: Added
-            opt.SignIn.RequireConfirmedEmail = false; // Set to true in production
+                opt.User.RequireUniqueEmail = true;
+                opt.SignIn.RequireConfirmedEmail = false;
 
-            // Lockout settings
-            opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-            opt.Lockout.MaxFailedAccessAttempts = 5;
-            opt.Lockout.AllowedForNewUsers = true;
-        })
-            .AddRoles<IdentityRole>()
+                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                opt.Lockout.MaxFailedAccessAttempts = 5;
+                opt.Lockout.AllowedForNewUsers = true;
+            })
             .AddEntityFrameworkStores<AppDbContext>()
-            .AddSignInManager<SignInManager<ApplicationIdentityUser>>()
             .AddDefaultTokenProviders();
     }
+
 
     // ============================
     // JWT Authentication
@@ -217,6 +214,8 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IGenericRepository<Client>, GenericRepository<Client>>();
+        services.AddScoped<IGenericRepository<Admin>, GenericRepository<Admin>>();
+
     }
 
     // ============================

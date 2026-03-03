@@ -6,15 +6,18 @@ using Bookify.Application.Interfaces.Auth;
 using Bookify.Application.Interfaces.Client;
 using Bookify.Application.Interfaces.Staff;
 using Bookify.Domain.Entities;
+using Bookify.Domain.Exceptions;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Identity.Entity;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Bookify.Infrastructure.Services.Auth
 {
+    /// <summary>
+    /// Infrastructure implementation of <see cref="IAuthService"/>.
+    /// All error paths throw typed <see cref="DomainException"/>-derived exceptions
+    /// that are caught uniformly by <c>GlobalExceptionMiddleware</c>.
+    /// </summary>
     public class AuthService : IAuthService
     {
         private readonly UserManager<ApplicationIdentityUser> _userManager;
@@ -34,15 +37,19 @@ namespace Bookify.Infrastructure.Services.Auth
             _jwtTokenGenerator = jwtTokenGenerator;
         }
 
+        // ─────────────────────────────────────────────
+        // Registration
+        // ─────────────────────────────────────────────
+
+        /// <exception cref="ConflictException">When the email is already registered.</exception>
+        /// <exception cref="RegistrationFailedException">When ASP.NET Identity validation fails.</exception>
         public async Task<ServiceResponse<Guid>> RegisterClientAsync(RegisterClientRequest request)
         {
-            var identityUser = await CreateIdentityUser(request, Roles.Client);
-            if (!identityUser.Success)
-                return ServiceResponse<Guid>.Fail(identityUser.Message!);
+            var identityUserId = await CreateIdentityUserAsync(request, Roles.Client);
 
             var client = new Client
             {
-                Id = (Guid)identityUser.Id,
+                Id = identityUserId,
                 FullName = request.FullName,
                 Phone = request.Phone,
                 DateOfBirth = request.DateOfBirth
@@ -52,18 +59,18 @@ namespace Bookify.Infrastructure.Services.Auth
 
             return ServiceResponse<Guid>.Ok(
                 id: client.Id,
-                message: "Client registered successfully");
+                message: "Client registered successfully.");
         }
 
+        /// <exception cref="ConflictException">When the email is already registered.</exception>
+        /// <exception cref="RegistrationFailedException">When ASP.NET Identity validation fails.</exception>
         public async Task<ServiceResponse<Guid>> RegisterStaffAsync(RegisterStaffRequest request)
         {
-            var identityUser = await CreateIdentityUser(request, Roles.Staff);
-            if (!identityUser.Success)
-                return ServiceResponse<Guid>.Fail(identityUser.Message!);
+            var identityUserId = await CreateIdentityUserAsync(request, Roles.Staff);
 
             var staff = new Staff
             {
-                Id = (Guid)identityUser.Id,
+                Id = identityUserId,
                 FullName = request.FullName,
                 Phone = request.Phone
             };
@@ -72,61 +79,26 @@ namespace Bookify.Infrastructure.Services.Auth
 
             return ServiceResponse<Guid>.Ok(
                 id: staff.Id,
-                message: "Staff registered successfully");
+                message: "Staff registered successfully.");
         }
 
-        private async Task<ServiceResponse<string>> CreateIdentityUser(
-            RegisterBaseRequest request,
-            string role)
-        {
-            // Check if user already exists
-            var existingUser = await _userManager.FindByEmailAsync(request.Email);
-            if (existingUser != null)
-            {
-                return ServiceResponse<string>.Fail("A user with this email already exists");
-            }
+        // ─────────────────────────────────────────────
+        // Login / Token management
+        // ─────────────────────────────────────────────
 
-            var user = new ApplicationIdentityUser
-            {
-                UserName = request.Email,
-                Email = request.Email,
-                PhoneNumber = request.Phone,
-                FullName = request.FullName,
-                EmailConfirmed = false // Require email confirmation in production
-            };
-
-            var result = await _userManager.CreateAsync(user, request.Password);
-            if (!result.Succeeded)
-            {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                return ServiceResponse<string>.Fail(errors);
-            }
-
-            await _userManager.AddToRoleAsync(user, role);
-
-            return ServiceResponse<string>.Ok(id:Guid.Parse(user.Id),data: user.Id, message:"User created successfully");
-        }
-
+        /// <exception cref="InvalidCredentialsException">When email or password is wrong.</exception>
+        /// <exception cref="UserLockedException">When the account is locked out.</exception>
         public async Task<ServiceResponse<LoginResponse>> LoginAsync(LoginRequest request)
         {
-            // Find user via Identity
-            var identityUser = await _userManager.FindByEmailAsync(request.Email);
-            if (identityUser is null)
-                return ServiceResponse<LoginResponse>.Fail("Invalid email or password");
+            var identityUser = await _userManager.FindByEmailAsync(request.Email)
+                ?? throw new InvalidCredentialsException();
 
-            // Check password
             if (!await _userManager.CheckPasswordAsync(identityUser, request.Password))
-                return ServiceResponse<LoginResponse>.Fail("Invalid email or password");
+                throw new InvalidCredentialsException();
 
-            // Check if email is confirmed (optional - enable in production)
-            // if (!identityUser.EmailConfirmed)
-            //     return ServiceResponse<LoginResponse>.Fail("Please confirm your email address");
-
-            // Check if user is locked out
             if (await _userManager.IsLockedOutAsync(identityUser))
-                return ServiceResponse<LoginResponse>.Fail("Account is locked. Please try again later");
+                throw new UserLockedException();
 
-            // Map IdentityUser → JwtUser
             var jwtUser = new JwtUser
             {
                 Id = identityUser.Id,
@@ -134,27 +106,21 @@ namespace Bookify.Infrastructure.Services.Auth
                 UserName = identityUser.UserName!
             };
 
-            // Get user roles
             var roles = await _userManager.GetRolesAsync(identityUser);
-            // Generate access token
             var accessToken = await _jwtTokenGenerator.GenerateTokenAsync(jwtUser, roles);
-
-            // Generate refresh token
             var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
             var refreshTokenHash = _jwtTokenGenerator.HashToken(refreshToken);
 
-            // Save refresh token to database
             await _jwtTokenGenerator.SaveRefreshTokenAsync(new RefreshToken
             {
                 Id = Guid.NewGuid(),
-                UserId = identityUser.Id,
+                UserId = identityUser.Id.ToString(),
                 TokenHash = refreshTokenHash,
                 ExpiresAt = DateTime.UtcNow.AddDays(7),
                 CreatedAt = DateTime.UtcNow,
                 IsRevoked = false
             });
 
-            // Reset access failed count on successful login
             await _userManager.ResetAccessFailedCountAsync(identityUser);
 
             return ServiceResponse<LoginResponse>.Ok(
@@ -164,30 +130,25 @@ namespace Bookify.Infrastructure.Services.Auth
                     RefreshToken = refreshToken,
                     Expiration = DateTime.UtcNow.AddHours(1),
                     Role = roles.FirstOrDefault() ?? "User",
-                    UserId = Guid.Parse(identityUser.Id),
+                    UserId = identityUser.Id,
                     FullName = identityUser.FullName ?? identityUser.UserName ?? string.Empty,
-                    Email = identityUser.Email ?? string.Empty,
+                    Email = identityUser.Email ?? string.Empty
                 },
-                "Login successful");
+                "Login successful.");
         }
 
+        /// <exception cref="InvalidCredentialsException">When the refresh token is invalid or expired.</exception>
         public async Task<ServiceResponse<LoginResponse>> RefreshTokenAsync(RefreshTokenRequest request)
         {
             var tokenHash = _jwtTokenGenerator.HashToken(request.RefreshToken);
-            var storedToken = await _jwtTokenGenerator.ValidateRefreshTokenAsync(tokenHash);
+            var storedToken = await _jwtTokenGenerator.ValidateRefreshTokenAsync(tokenHash)
+                ?? throw new InvalidCredentialsException("Invalid or expired refresh token.");
 
-            if (storedToken == null)
-                return ServiceResponse<LoginResponse>.Fail("Invalid or expired refresh token");
+            var identityUser = await _userManager.FindByIdAsync(storedToken.UserId)
+                ?? throw new InvalidCredentialsException("User associated with token not found.");
 
-            // Get user
-            var identityUser = await _userManager.FindByIdAsync(storedToken.UserId);
-            if (identityUser == null)
-                return ServiceResponse<LoginResponse>.Fail("User not found");
-
-            // Revoke old refresh token
             await _jwtTokenGenerator.RevokeTokenAsync(tokenHash);
 
-            // Generate new tokens
             var jwtUser = new JwtUser
             {
                 Id = identityUser.Id,
@@ -200,11 +161,10 @@ namespace Bookify.Infrastructure.Services.Auth
             var newRefreshToken = _jwtTokenGenerator.GenerateRefreshToken();
             var newRefreshTokenHash = _jwtTokenGenerator.HashToken(newRefreshToken);
 
-            // Save new refresh token
             await _jwtTokenGenerator.SaveRefreshTokenAsync(new RefreshToken
             {
                 Id = Guid.NewGuid(),
-                UserId = identityUser.Id,
+                UserId = identityUser.Id.ToString(),
                 TokenHash = newRefreshTokenHash,
                 ExpiresAt = DateTime.UtcNow.AddDays(7),
                 CreatedAt = DateTime.UtcNow,
@@ -219,18 +179,52 @@ namespace Bookify.Infrastructure.Services.Auth
                     RefreshToken = newRefreshToken,
                     Expiration = DateTime.UtcNow.AddHours(1),
                     Role = roles.FirstOrDefault() ?? "User",
-                    UserId = Guid.Parse(identityUser.Id),
+                    UserId = identityUser.Id,
                     FullName = identityUser.FullName ?? identityUser.UserName ?? string.Empty,
                     Email = identityUser.Email ?? string.Empty
                 },
-                "Token refreshed successfully");
+                "Token refreshed successfully.");
         }
 
         public async Task<ServiceResponse<bool>> RevokeTokenAsync(string userId)
         {
             await _jwtTokenGenerator.RevokeAllUserTokensAsync(userId);
-            return ServiceResponse<bool>.Ok(true, "All tokens revoked successfully");
+            return ServiceResponse<bool>.Ok(true, "All tokens revoked successfully.");
+        }
+
+        // ─────────────────────────────────────────────
+        // Private helpers
+        // ─────────────────────────────────────────────
+
+        /// <summary>Creates an ASP.NET Identity user and assigns the given role.</summary>
+        /// <returns>The new user's <see cref="Guid"/> ID.</returns>
+        /// <exception cref="ConflictException">When the email is already taken.</exception>
+        /// <exception cref="RegistrationFailedException">When Identity reports validation errors.</exception>
+        private async Task<Guid> CreateIdentityUserAsync(RegisterBaseRequest request, string role)
+        {
+            var existingUser = await _userManager.FindByEmailAsync(request.Email);
+            if (existingUser is not null)
+                throw new ConflictException($"An account with email '{request.Email}' already exists.");
+
+            var user = new ApplicationIdentityUser
+            {
+                UserName = request.Email,
+                Email = request.Email,
+                PhoneNumber = request.Phone,
+                FullName = request.FullName,
+                EmailConfirmed = false
+            };
+
+            var result = await _userManager.CreateAsync(user, request.Password);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                throw new RegistrationFailedException(errors);
+            }
+
+            await _userManager.AddToRoleAsync(user, role);
+
+            return Guid.Parse(user.Id.ToString());
         }
     }
 }
-
