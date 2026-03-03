@@ -1,5 +1,4 @@
 ﻿using Bookify.Domain.Exceptions;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -16,8 +15,6 @@ namespace Bookify.API.Middleware
         private readonly RequestDelegate _next;
         private readonly ILogger<GlobalExceptionMiddleware> _logger;
         private readonly IHostEnvironment _environment;
-
-        private static bool _isDevelopment;
 
         public GlobalExceptionMiddleware(
             RequestDelegate next,
@@ -56,10 +53,17 @@ namespace Bookify.API.Middleware
             context.Response.StatusCode = errorResponse.StatusCode;
             context.Response.ContentType = "application/json";
 
+            // Always hide stack trace & inner exception in production
+            if (_environment.IsDevelopment())
+            {
+                errorResponse.StackTrace = null;
+                errorResponse.InnerException = null;
+            }
+
             var json = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = true
+                WriteIndented = false // production should not indent JSON
             });
 
             await context.Response.WriteAsync(json);
@@ -69,7 +73,7 @@ namespace Bookify.API.Middleware
         {
             var (statusCode, errorType, message, details) = ClassifyException(exception);
 
-            var response = new ErrorResponse
+            return new ErrorResponse
             {
                 StatusCode = (int)statusCode,
                 ErrorType = errorType,
@@ -79,22 +83,21 @@ namespace Bookify.API.Middleware
                 Method = context.Request.Method,
                 TraceId = context.TraceIdentifier,
                 Timestamp = DateTime.UtcNow,
-                Instance = $"{context.Request.Method} {context.Request.Path}"
+                Instance = $"{context.Request.Method} {context.Request.Path}",
+                StackTrace = exception.StackTrace,
+                InnerException = exception.InnerException?.Message
             };
-
-            if (_environment.IsDevelopment())
-            {
-                response.StackTrace = exception.StackTrace;
-                response.InnerException = exception.InnerException?.Message;
-            }
-
-            return response;
         }
-
         private static (HttpStatusCode status, string type, string message, string? details)
             ClassifyException(Exception exception) => exception switch
             {
-                // ── Domain exceptions (custom, always safe to expose) ──────────────────
+                UnAuthorizedException unAuthorized => (
+                HttpStatusCode.Unauthorized,
+                "UnAuthorized",
+                unAuthorized.Message,
+                null
+                ),
+                // ── Domain exceptions ─────────────────────────
                 NotFoundException notFound => (
                     HttpStatusCode.NotFound,
                     "NotFound",
@@ -131,7 +134,25 @@ namespace Bookify.API.Middleware
                     slot.Message,
                     null),
 
-                // ── Infrastructure / EF exceptions ────────────────────────────────────
+                InvalidCredentialsException credentials => (
+                    HttpStatusCode.Unauthorized,
+                    "InvalidCredentials",
+                    credentials.Message,
+                    null),
+
+                UserLockedException locked => (
+                    (HttpStatusCode)423,
+                    "AccountLocked",
+                    locked.Message,
+                    null),
+
+                RegistrationFailedException regFailed => (
+                    HttpStatusCode.BadRequest,
+                    "RegistrationFailed",
+                    regFailed.Message,
+                    null),
+
+                // ── EF / SQL exceptions ───────────────────────
                 DbUpdateConcurrencyException concurrency => (
                     HttpStatusCode.Conflict,
                     "ConcurrencyError",
@@ -144,7 +165,7 @@ namespace Bookify.API.Middleware
                     "A database error occurred.",
                     GetSqlDetails(sqlEx)),
 
-                // ── Standard .NET exceptions ───────────────────────────────────────────
+                // ── Standard .NET exceptions ─────────────────
                 ArgumentNullException argNull => (
                     HttpStatusCode.BadRequest,
                     "ArgumentNull",
@@ -160,14 +181,14 @@ namespace Bookify.API.Middleware
                 KeyNotFoundException key => (
                     HttpStatusCode.NotFound,
                     "NotFound",
-                    key.Message,
+                    "The requested resource was not found.",
                     null),
 
                 NotImplementedException notImpl => (
                     HttpStatusCode.NotImplemented,
                     "NotImplemented",
                     "This feature is not yet implemented.",
-                    notImpl.Message),
+                    null),
 
                 OperationCanceledException => (
                     HttpStatusCode.RequestTimeout,
@@ -175,7 +196,7 @@ namespace Bookify.API.Middleware
                     "The request was cancelled.",
                     null),
 
-                // ── Catch-all ─────────────────────────────────────────────────────────
+                // ── Catch-all ───────────────────────────────
                 _ => (
                     HttpStatusCode.InternalServerError,
                     "InternalServerError",
@@ -205,12 +226,7 @@ namespace Bookify.API.Middleware
 
         private void LogError(HttpContext context, Exception exception, ErrorResponse response)
         {
-            var level = response.StatusCode switch
-            {
-                >= 500 => LogLevel.Error,
-                >= 400 => LogLevel.Warning,
-                _ => LogLevel.Information
-            };
+            var level = response.StatusCode >= 500 ? LogLevel.Error : LogLevel.Warning;
 
             _logger.Log(
                 level,
@@ -224,8 +240,6 @@ namespace Bookify.API.Middleware
                 response.Path,
                 context.User?.Identity?.Name ?? "Anonymous");
         }
-
-        public static void SetEnvironment(bool isDevelopment) => _isDevelopment = isDevelopment;
     }
 
     /// <summary>RFC-7807-inspired error response model.</summary>
@@ -246,11 +260,8 @@ namespace Bookify.API.Middleware
 
     public static class GlobalExceptionMiddlewareExtensions
     {
-        public static IApplicationBuilder UseGlobalExceptionHandler(
-            this IApplicationBuilder app,
-            IHostEnvironment environment)
+        public static IApplicationBuilder UseGlobalExceptionHandler(this IApplicationBuilder app, IWebHostEnvironment environment)
         {
-            GlobalExceptionMiddleware.SetEnvironment(environment.IsDevelopment());
             return app.UseMiddleware<GlobalExceptionMiddleware>();
         }
     }
