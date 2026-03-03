@@ -19,10 +19,10 @@ namespace Bookify.Domain.Entities
         public int Duration { get; set; }  // Minutes
 
         [Required]
-        public int TimeStart { get; set; } // 24 hours format -- service time available 
+        public TimeSpan TimeStart { get; set; } // 24 hours format -- service time available 
 
         [Required]
-        public int TimeEnd { get; set; } // 24 hours format  -- service time available 
+        public TimeSpan TimeEnd { get; set; } // 24 hours format  -- service time available 
 
         [Required]
         public decimal Price { get; set; }

@@ -8,8 +8,8 @@ public class ServiceModel
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public int Duration { get; set; }
-    public TimeSpan StartTime { get; set; }
-    public TimeSpan EndTime { get; set; }
+    public TimeSpan TimeStart { get; set; }
+    public TimeSpan TimeEnd { get; set; }
     public decimal Price { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public Guid CategoryId { get; set; }
