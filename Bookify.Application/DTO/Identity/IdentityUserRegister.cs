@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 
-namespace Bookify.Application.DTO
+namespace Bookify.Application.DTO.Identity
 {
     public class IdentityUserRegister
     {

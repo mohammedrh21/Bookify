@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Bookify.Application.DTO
+namespace Bookify.Application.DTO.Identity
 {
     public class RegisterClientRequest : RegisterBaseRequest
     {

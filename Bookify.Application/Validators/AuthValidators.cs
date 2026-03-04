@@ -1,5 +1,5 @@
-﻿using Bookify.Application.DTO;
-using Bookify.Application.DTO.Auth;
+﻿using Bookify.Application.DTO.Auth;
+using Bookify.Application.DTO.Identity;
 using FluentValidation;
 using System;
 using System.Collections.Generic;
