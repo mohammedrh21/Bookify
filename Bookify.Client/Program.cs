@@ -1,4 +1,5 @@
 using Blazored.LocalStorage;
+using Blazorise;
 using Bookify.Client;
 using Bookify.Client.Auth;
 using Bookify.Client.Services;
@@ -27,5 +28,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IServiceApiService, ServiceApiService>();
-
+builder.Services.AddScoped<IFAQApiService, FAQApiService>();
+builder.Services.AddScoped<ITicketApiService, TicketApiService>();
+builder.Services.AddScoped<ToastService>();
 await builder.Build().RunAsync();

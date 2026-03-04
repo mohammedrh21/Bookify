@@ -152,6 +152,12 @@ namespace Bookify.API.Middleware
                     regFailed.Message,
                     null),
 
+                TicketRateLimitException rateLimit => (
+                    HttpStatusCode.TooManyRequests,
+                    "RateLimitExceeded",
+                    rateLimit.Message,
+                    null),
+
                 // ── EF / SQL exceptions ───────────────────────
                 DbUpdateConcurrencyException concurrency => (
                     HttpStatusCode.Conflict,
