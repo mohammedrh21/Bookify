@@ -1,0 +1,77 @@
+@page "/admin/tickets"
+@attribute [Authorize(Roles = "Admin")]
+@inject Bookify.Client.Services.ITicketApiService TicketService
+
+<PageTitle>Support Tickets — Bookify Admin</PageTitle>
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Support Tickets</h1>
+        <p class="text-gray-400 mt-1">View incoming customer support requests</p>
+    </div>
+
+    @if (_loading)
+    {
+        <LoadingSpinner Message="Loading tickets..." />
+    }
+    else if (_tickets.Count == 0)
+    {
+        <EmptyState Icon="🎉" Title="No support tickets" Message="Your support queue is empty!" />
+    }
+    else
+    {
+        <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Date</th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Customer Email</th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Subject</th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Message</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @foreach (var ticket in _tickets)
+                        {
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-5 text-sm font-medium text-gray-900 whitespace-nowrap align-top">
+                                    <div class="flex flex-col">
+                                        <span>@ticket.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy")</span>
+                                        <span class="text-xs text-gray-400">@ticket.CreatedAt.ToLocalTime().ToString("hh:mm tt")</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-5 text-sm text-gray-600 font-medium whitespace-nowrap align-top">
+                                    <a href="mailto:@ticket.Email" class="text-primary-600 hover:text-primary-800 hover:underline">
+                                        @ticket.Email
+                                    </a>
+                                </td>
+                                <td class="px-6 py-5 text-sm text-gray-900 font-semibold align-top max-w-xs truncate">
+                                    @ticket.Subject
+                                </td>
+                                <td class="px-6 py-5 text-sm text-gray-600 leading-relaxed align-top">
+                                    <div class="whitespace-pre-wrap max-w-xl">@ticket.Description</div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-50 bg-gray-50/50 flex justify-between items-center text-sm text-gray-500">
+                <span>Showing @_tickets.Count tickets</span>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Bookify.Client.Models.SupportTicket.TicketModel> _tickets = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await TicketService.GetAllAsync();
+        _tickets = result.Data ?? [];
+        _loading = false;
+    }
+}

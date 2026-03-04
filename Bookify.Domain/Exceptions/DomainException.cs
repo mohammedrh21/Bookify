@@ -119,4 +119,15 @@ namespace Bookify.Domain.Exceptions
         public RegistrationFailedException(string message)
             : base(message) { }
     }
+
+    // ──────────────────────────────────────────
+    // 429 – Ticket Rate Limit
+    // ──────────────────────────────────────────
+
+    /// <summary>Thrown when an email has already submitted a support ticket today (1 per UTC day).</summary>
+    public class TicketRateLimitException : DomainException
+    {
+        public TicketRateLimitException()
+            : base("You have already submitted a support ticket today. Please try again tomorrow.") { }
+    }
 }

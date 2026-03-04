@@ -4,16 +4,20 @@ using Bookify.Application.Interfaces;
 using Bookify.Application.Interfaces.Auth;
 using Bookify.Application.Interfaces.Category;
 using Bookify.Application.Interfaces.Client;
+using Bookify.Application.Interfaces.FAQ;
 using Bookify.Application.Interfaces.Service;
 using Bookify.Application.Interfaces.Staff;
+using Bookify.Application.Interfaces.Ticket;
 using Bookify.Application.Mapping;
 using Bookify.Application.Services;
 using Bookify.Application.Validators;
 using Bookify.Domain.Contracts;
 using Bookify.Domain.Contracts.Booking;
 using Bookify.Domain.Contracts.Category;
+using Bookify.Domain.Contracts.FAQ;
 using Bookify.Domain.Contracts.RefreshToken;
 using Bookify.Domain.Contracts.Service;
+using Bookify.Domain.Contracts.SupportTicket;
 using Bookify.Domain.Entities;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Identity;
@@ -188,6 +192,8 @@ public static class DependencyInjection
         services.AddScoped<IStaffRepository, StaffRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>(); // FIXED: Added
+        services.AddScoped<IFAQRepository, FAQRepository>();
+        services.AddScoped<ITicketRepository, TicketRepository>();
     }
 
     // ============================
@@ -213,6 +219,8 @@ public static class DependencyInjection
         services.AddScoped<IServiceService, ServiceService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IFAQService, FAQService>();
+        services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<IGenericRepository<Client>, GenericRepository<Client>>();
         services.AddScoped<IGenericRepository<Admin>, GenericRepository<Admin>>();
 

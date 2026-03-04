@@ -18,4 +18,9 @@
     <ProjectReference Include="..\Bookify.Domain\Bookify.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DTO\FAQ\" />
+    <Folder Include="DTO\SupportTicket\" />
+  </ItemGroup>
+
 </Project>

@@ -22,6 +22,9 @@ namespace Bookify.Infrastructure.Data
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<FAQ> FAQs { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

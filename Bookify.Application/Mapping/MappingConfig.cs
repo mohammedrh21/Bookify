@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
-using Bookify.Application.DTO;
 using Bookify.Application.DTO.Booking;
 using Bookify.Application.DTO.Category;
+using Bookify.Application.DTO.Identity;
 using Bookify.Application.DTO.Service;
 using Bookify.Domain.Entities;
 using Bookify.Domain.Enums;
@@ -57,6 +57,15 @@ namespace Bookify.Application.Mapping
                            o => o.MapFrom(s => s.Service != null ? s.Service.Price : 0m))
                 .ForMember(d => d.DurationMinutes,
                            o => o.MapFrom(s => s.Service != null ? s.Service.Duration : 0));
+
+            // ── FAQ ────────────────────────────────────────────────
+            CreateMap<Bookify.Application.DTO.FAQ.CreateFAQRequest, FAQ>();
+            CreateMap<Bookify.Application.DTO.FAQ.UpdateFAQRequest, FAQ>();
+            CreateMap<FAQ, Bookify.Application.DTO.FAQ.FAQResponse>();
+
+            // ── Support Ticket ─────────────────────────────────────
+            CreateMap<Bookify.Application.DTO.SupportTicket.CreateTicketRequest, SupportTicket>();
+            CreateMap<SupportTicket, Bookify.Application.DTO.SupportTicket.TicketResponse>();
         }
     }
 }

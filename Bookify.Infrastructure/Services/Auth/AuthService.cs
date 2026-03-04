@@ -1,6 +1,6 @@
 ﻿using Bookify.Application.Common;
-using Bookify.Application.DTO;
 using Bookify.Application.DTO.Auth;
+using Bookify.Application.DTO.Identity;
 using Bookify.Application.Interfaces;
 using Bookify.Application.Interfaces.Auth;
 using Bookify.Application.Interfaces.Client;
