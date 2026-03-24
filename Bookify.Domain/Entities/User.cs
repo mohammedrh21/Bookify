@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bookify.Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -18,6 +19,8 @@ namespace Bookify.Domain.Entities
 
         [Required]
         public string Phone { get; set; } = default!;
+
+        public bool IsActive { get; set; } = true;
     }
 
     // =====================================
@@ -25,7 +28,9 @@ namespace Bookify.Domain.Entities
     // =====================================
     public class Client : User
     {
+        public GenderType Gender { get; set; }
         public DateTime? DateOfBirth { get; set; }
+        public string? ImagePath { get; set; }
 
         // One client can have multiple bookings
         public ICollection<Booking>? Bookings { get; set; }
@@ -36,6 +41,8 @@ namespace Bookify.Domain.Entities
     // =====================================
     public class Staff : User
     {
+        public GenderType Gender { get; set; }
+        public string? ImagePath { get; set; }
         // One-to-One with Service
         public Service Service { get; set; } = default!;
     }

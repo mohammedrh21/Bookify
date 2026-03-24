@@ -1,7 +1,9 @@
 <div class="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
     <div class="flex items-start justify-between mb-3">
         <div>
-            <h3 class="font-semibold text-gray-900">@Booking.ServiceName</h3>
+            <h3 class="font-semibold text-gray-900 hover:text-primary-600 transition-colors">
+                <a href="/service/@Booking.ServiceId">@Booking.ServiceName</a>
+            </h3>
             <p class="text-sm text-gray-400 mt-0.5">with @Booking.StaffName</p>
         </div>
         <StatusBadge Status="@Booking.Status" />
@@ -38,6 +40,13 @@
                class="px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors">
                 Details
             </a>
+            @if (Booking.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                <button @onclick="() => OnRate.InvokeAsync(Booking)"
+                        class="px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+                    Rate Service
+                </button>
+            }
         </div>
     </div>
 </div>
@@ -45,4 +54,5 @@
 @code {
     [Parameter] public BookingModel        Booking  { get; set; } = default!;
     [Parameter] public EventCallback<Guid> OnCancel { get; set; }
+    [Parameter] public EventCallback<BookingModel> OnRate { get; set; }
 }

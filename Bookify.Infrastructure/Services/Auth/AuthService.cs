@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Common;
+using Bookify.Application.Common;
 using Bookify.Application.DTO.Auth;
 using Bookify.Application.DTO.Identity;
 using Bookify.Application.Interfaces;
@@ -10,6 +10,7 @@ using Bookify.Domain.Exceptions;
 using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Identity.Entity;
 using Microsoft.AspNetCore.Identity;
+using Bookify.Application.Interfaces.Email;
 
 namespace Bookify.Infrastructure.Services.Auth
 {
@@ -24,17 +25,20 @@ namespace Bookify.Infrastructure.Services.Auth
         private readonly IClientRepository _clientRepo;
         private readonly IStaffRepository _staffRepo;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
+        private readonly IEmailSender _emailSender;
 
         public AuthService(
             UserManager<ApplicationIdentityUser> userManager,
             IClientRepository clientRepo,
             IStaffRepository staffRepo,
-            IJwtTokenGenerator jwtTokenGenerator)
+            IJwtTokenGenerator jwtTokenGenerator,
+            IEmailSender emailSender)
         {
             _userManager = userManager;
             _clientRepo = clientRepo;
             _staffRepo = staffRepo;
             _jwtTokenGenerator = jwtTokenGenerator;
+            _emailSender = emailSender;
         }
 
         // ─────────────────────────────────────────────
@@ -225,6 +229,71 @@ namespace Bookify.Infrastructure.Services.Auth
             await _userManager.AddToRoleAsync(user, role);
 
             return Guid.Parse(user.Id.ToString());
+        }
+
+        // ─────────────────────────────────────────────
+        // Forgot Password
+        // ─────────────────────────────────────────────
+
+        public async Task<ServiceResponse<bool>> ForgotPasswordAsync(ForgotPasswordRequest request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user is null)
+            {
+                throw new BusinessRuleException("This email is not registered yet.");
+            }
+
+            var random = new Random();
+            var otp = random.Next(100000, 999999).ToString();
+
+            user.ResetOtp = otp;
+            user.ResetOtpExpiry = DateTime.UtcNow.AddMinutes(5);
+
+            await _userManager.UpdateAsync(user);
+
+            var subject = "Your Password Reset OTP";
+            var message = $"<p>Your OTP for password reset is: <strong>{otp}</strong></p><p>This OTP will expire in 5 minutes.</p>";
+
+            await _emailSender.SendEmailAsync(request.Email, subject, message);
+
+            return ServiceResponse<bool>.Ok(true, "OTP sent to your email.");
+        }
+
+        public async Task<ServiceResponse<string>> VerifyOtpAsync(VerifyOtpRequest request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user is null)
+                throw new BusinessRuleException("Invalid request.");
+
+            if (user.ResetOtp != request.Otp)
+                throw new BusinessRuleException("Invalid OTP.");
+
+            if (user.ResetOtpExpiry < DateTime.UtcNow)
+                throw new BusinessRuleException("OTP expired.");
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            user.ResetOtp = null;
+            user.ResetOtpExpiry = null;
+            await _userManager.UpdateAsync(user);
+
+            return ServiceResponse<string>.Ok(token, "OTP verified successfully.");
+        }
+
+        public async Task<ServiceResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user is null)
+                throw new NotFoundException("User", request.Email);
+
+            var result = await _userManager.ResetPasswordAsync(user, request.ResetToken, request.NewPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                throw new BusinessRuleException($"Password reset failed: {errors}");
+            }
+
+            return ServiceResponse<bool>.Ok(true, "Password reset successfully.");
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Bookify.Application.DTO.Service;
+using Bookify.Application.DTO.Service;
 using FluentValidation;
 using System;
 using System.Collections.Generic;

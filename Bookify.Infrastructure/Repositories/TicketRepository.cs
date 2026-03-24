@@ -13,11 +13,22 @@ namespace Bookify.Infrastructure.Repositories
         private readonly AppDbContext _db;
         public TicketRepository(AppDbContext db) => _db = db;
 
+        public async Task<IEnumerable<SupportTicket>> GetAllAsync()
+            => await _db.SupportTickets.AsNoTracking().ToListAsync();
+
+        public async Task<(IEnumerable<SupportTicket> Items, int TotalCount)> GetPaginatedAsync(int pageNumber, int pageSize)
+        {
+            var query = _db.SupportTickets.AsNoTracking();
+            var totalCount = await query.CountAsync();
+            var items = await query.OrderByDescending(x => x.CreatedAt)
+                                   .Skip((pageNumber - 1) * pageSize)
+                                   .Take(pageSize)
+                                   .ToListAsync();
+            return (items, totalCount);
+        }
+
         public async Task AddAsync(SupportTicket SupportTicket)
             => await _db.SupportTickets.AddAsync(SupportTicket);
-
-        public async Task<IEnumerable<SupportTicket>> GetAllAsync()
-            => _db.SupportTickets.AsNoTracking().ToList();
 
         public Task<SupportTicket?> GetByIdAsync(Guid id)
             => _db.SupportTickets.SingleOrDefaultAsync(x => x.Id == id);
@@ -28,6 +39,6 @@ namespace Bookify.Infrastructure.Repositories
                 x.CreatedAt.Date == date.Date);
 
         public async Task SaveChangesAsync()
-            => _db.SaveChanges();
+            => await _db.SaveChangesAsync();
     }
 }

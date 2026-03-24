@@ -1,4 +1,5 @@
 using Bookify.Application.DTO.FAQ;
+using Bookify.Application.DTO.Common;
 using Bookify.Application.Interfaces.FAQ;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,10 +20,10 @@ namespace Bookify.API.Controllers
         [HttpGet]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] PaginationParams paginationParams)
         {
-            var result = await _faqService.GetAllAsync();
-            return Ok(result);
+            var result = await _faqService.GetAllAsync(paginationParams);
+            return HandleResult(result);
         }
 
         [HttpGet("{id:guid}")]
@@ -32,7 +33,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _faqService.GetByIdAsync(id);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         [HttpPost]
@@ -42,7 +43,8 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> Create([FromBody] CreateFAQRequest request)
         {
             var result = await _faqService.CreateAsync(request);
-            return CreatedAtAction(nameof(GetById), new { id = result.Data }, result);
+            if (result.Success) return CreatedAtAction(nameof(GetById), new { id = result.Data }, result);
+            return HandleResult(result);
         }
 
         [HttpPut("{id:guid}")]
@@ -54,7 +56,7 @@ namespace Bookify.API.Controllers
         {
             if (id != request.Id) return BadRequest("ID mismatch");
             var result = await _faqService.UpdateAsync(request);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         [HttpDelete("{id:guid}")]
@@ -64,7 +66,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _faqService.DeleteAsync(id);
-            return Ok(result);
+            return HandleResult(result);
         }
     }
 }

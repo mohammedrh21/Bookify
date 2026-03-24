@@ -1,6 +1,4 @@
 @page "/services"
-@inject IServiceApiService ServiceService
-@inject ICategoryService   CategoryService
 
 <PageTitle>Services — Bookify</PageTitle>
 
@@ -19,7 +17,7 @@
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary-500 transition-colors">
                 <i class="fa-solid fa-magnifying-glass"></i>
             </div>
-            <input @bind="_search" @bind:event="oninput" type="text"
+            <input @bind="_search" @oninput="OnSearchChanged" type="text"
                    placeholder="Search services by name or description..."
                    class="w-full pl-11 pr-4 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-sm shadow-sm transition-all" />
         </div>
@@ -29,14 +27,14 @@
     @if (_categories.Count > 0)
     {
         <div class="flex gap-3 flex-wrap mb-10">
-            <button @onclick="() => _selectedCategoryId = null"
+            <button @onclick="() => SelectCategory(null)"
                     class="px-5 py-2.5 rounded-full text-sm font-semibold transition-all hover-lift
                            @(_selectedCategoryId == null ? "bg-gradient-to-r from-primary-600 to-indigo-600 text-white shadow-md shadow-primary-500/30" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50")">
                 All
             </button>
             @foreach (var cat in _categories)
             {
-                <button @onclick="() => _selectedCategoryId = cat.Id"
+                <button @onclick="() => SelectCategory(cat.Id)"
                         class="px-5 py-2.5 rounded-full text-sm font-semibold transition-all hover-lift
                                @(_selectedCategoryId == cat.Id ? "bg-gradient-to-r from-primary-600 to-indigo-600 text-white shadow-md shadow-primary-500/30" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50")">
                     @cat.Name
@@ -50,7 +48,7 @@
     {
         <LoadingSpinner Message="Loading services..." />
     }
-    else if (FilteredServices.Count == 0)
+    else if (_services.Count == 0)
     {
         <EmptyState Icon="🔍" Title="No services found"
                     Message="Try adjusting your search or category filter." />
@@ -58,42 +56,11 @@
     else
     {
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            @foreach (var svc in FilteredServices)
+            @foreach (var svc in _services)
             {
                 <ServiceCard Service="svc" />
             }
         </div>
-        <p class="text-sm text-gray-400 text-right mt-4">
-            @FilteredServices.Count service(s)
-        </p>
+        <Pagination CurrentPage="_currentPage" TotalPages="_totalPages" TotalCount="_totalCount" OnPageChanged="OnPageChanged" />
     }
 </div>
-
-@code {
-    private List<ServiceModel>  _services          = [];
-    private List<CategoryModel> _categories        = [];
-    private bool                _loading           = true;
-    private string              _search            = string.Empty;
-    private Guid?               _selectedCategoryId;
-
-    private List<ServiceModel> FilteredServices => _services
-        .Where(s => !s.IsDeleted &&
-                    (string.IsNullOrEmpty(_search) ||
-                     s.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) ||
-                     s.Description.Contains(_search, StringComparison.OrdinalIgnoreCase)) &&
-                    (_selectedCategoryId == null || s.CategoryId == _selectedCategoryId))
-        .ToList();
-
-    protected override async Task OnInitializedAsync()
-    {
-        var catTask = CategoryService.GetAllAsync();
-        var svcTask = ServiceService.GetAllAsync();
-        
-        var catResult = await catTask;
-        var svcResult = await svcTask;
-
-        _categories = catResult.Data ?? [];
-        _services   = svcResult.Data ?? [];
-        _loading    = false;
-    }
-}

@@ -1,0 +1,188 @@
+@inject IBookingService BookingService
+
+<div class="booking-calendar bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+    <!-- Calendar Header -->
+    <div class="p-6 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+        <button @onclick="PrevMonth" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-200 transition-all shadow-sm">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <h3 class="text-xl font-bold text-gray-900">@_currentMonth.ToString("MMMM yyyy")</h3>
+        <button @onclick="NextMonth" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-200 transition-all shadow-sm">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <div class="p-6">
+        <!-- Days of Week -->
+        <div class="grid grid-cols-7 gap-1 mb-2">
+            @foreach (var day in _daysOfWeek)
+            {
+                <div class="text-center text-xs font-bold text-gray-400 uppercase tracking-widest py-2">@day</div>
+            }
+        </div>
+
+        <!-- Days Grid -->
+        <div class="grid grid-cols-7 gap-2">
+            @for (int i = 0; i < _emptyDaysAtStart; i++)
+            {
+                <div class="aspect-square"></div>
+            }
+
+            @foreach (var day in _daysInMonth)
+            {
+                bool isPast = day < DateTime.Today;
+                bool isSelected = SelectedDate.Date == day.Date;
+                
+                <button @onclick="() => SelectDate(day)" 
+                        disabled="@isPast"
+                        class="aspect-square rounded-2xl flex flex-col items-center justify-center transition-all relative group
+                               @(isPast ? "text-gray-200 cursor-not-allowed" : "")
+                               @(isSelected ? "bg-primary-600 text-white shadow-lg shadow-primary-500/30 scale-105 z-10" : "hover:bg-primary-50 hover:text-primary-600 text-gray-700")">
+                    <span class="text-sm font-bold">@day.Day</span>
+                    @if (!isPast && !isSelected)
+                    {
+                        <div class="w-1 h-1 rounded-full bg-primary-200 mt-1 group-hover:bg-primary-400 transition-colors"></div>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Time Slots -->
+    <div class="p-6 bg-gray-50 border-t border-gray-100">
+        <h4 class="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <i class="fas fa-clock text-primary-500"></i>
+            Available Times for @SelectedDate.ToString("MMM dd")
+        </h4>
+
+        @if (_loadingSlots)
+        {
+            <div class="flex items-center gap-3 text-gray-400 py-4">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span class="text-sm">Checking availability...</span>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                @foreach (var slot in _timeSlots)
+                {
+                    bool isOccupied = _occupiedSlots.Any(s => s.Date == SelectedDate.Date && s.TimeOfDay == slot);
+                    bool isPastTime = SelectedDate.Date == DateTime.Today && slot < DateTime.Now.TimeOfDay;
+                    bool isSelected = SelectedTime == slot;
+
+                    <button @onclick="() => SelectTime(slot)"
+                            disabled="@(isOccupied || isPastTime)"
+                            class="py-3 px-2 rounded-xl text-xs font-bold transition-all border
+                                   @(isOccupied || isPastTime ? "bg-gray-100 border-gray-100 text-gray-300 cursor-not-allowed line-through" : 
+                                     isSelected ? "bg-primary-600 border-primary-600 text-white shadow-md" : 
+                                     "bg-white border-gray-200 text-gray-600 hover:border-primary-400 hover:text-primary-600")">
+                        @DateTime.Today.Add(slot).ToString("hh:mm tt")
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .booking-calendar {
+        user-select: none;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid ServiceId { get; set; }
+    [Parameter] public DateTime SelectedDate { get; set; } = DateTime.Today.AddDays(1);
+    [Parameter] public TimeSpan SelectedTime { get; set; }
+    [Parameter] public EventCallback<DateTime> OnDateSelected { get; set; }
+    [Parameter] public EventCallback<TimeSpan> OnTimeSelected { get; set; }
+    
+    // Configurable work hours (could be passed as parameters if needed)
+    [Parameter] public TimeSpan StartHour { get; set; } = new TimeSpan(9, 0, 0);
+    [Parameter] public TimeSpan EndHour { get; set; } = new TimeSpan(18, 0, 0);
+    [Parameter] public int IntervalMinutes { get; set; } = 60;
+
+    private DateTime _currentMonth = DateTime.Today;
+    private readonly string[] _daysOfWeek = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+    
+    private List<DateTime> _daysInMonth = new();
+    private int _emptyDaysAtStart;
+
+    private List<DateTime> _occupiedSlots = new();
+    private List<TimeSpan> _timeSlots = new();
+    private bool _loadingSlots = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentMonth = new DateTime(SelectedDate.Year, SelectedDate.Month, 1);
+        GenerateCalendar();
+        GenerateTimeSlots();
+        await LoadOccupiedSlots();
+    }
+
+    private void GenerateCalendar()
+    {
+        _daysInMonth.Clear();
+        var daysCount = DateTime.DaysInMonth(_currentMonth.Year, _currentMonth.Month);
+        var firstDay = new DateTime(_currentMonth.Year, _currentMonth.Month, 1);
+        _emptyDaysAtStart = (int)firstDay.DayOfWeek;
+
+        for (int i = 1; i <= daysCount; i++)
+        {
+            _daysInMonth.Add(new DateTime(_currentMonth.Year, _currentMonth.Month, i));
+        }
+    }
+
+    private void GenerateTimeSlots()
+    {
+        _timeSlots.Clear();
+        var current = StartHour;
+        while (current < EndHour)
+        {
+            _timeSlots.Add(current);
+            current = current.Add(TimeSpan.FromMinutes(IntervalMinutes));
+        }
+    }
+
+    private async Task LoadOccupiedSlots()
+    {
+        _loadingSlots = true;
+        var start = new DateTime(_currentMonth.Year, _currentMonth.Month, 1);
+        var end = start.AddMonths(1).AddDays(-1);
+        
+        var result = await BookingService.GetOccupiedSlotsAsync(ServiceId, start, end);
+        if (result.Success)
+        {
+            _occupiedSlots = result.Data ?? new();
+        }
+        _loadingSlots = false;
+        StateHasChanged();
+    }
+
+    private async Task PrevMonth()
+    {
+        _currentMonth = _currentMonth.AddMonths(-1);
+        GenerateCalendar();
+        await LoadOccupiedSlots();
+    }
+
+    private async Task NextMonth()
+    {
+        _currentMonth = _currentMonth.AddMonths(1);
+        GenerateCalendar();
+        await LoadOccupiedSlots();
+    }
+
+    private async Task SelectDate(DateTime date)
+    {
+        SelectedDate = date;
+        await OnDateSelected.InvokeAsync(date);
+    }
+
+    private async Task SelectTime(TimeSpan time)
+    {
+        SelectedTime = time;
+        await OnTimeSelected.InvokeAsync(time);
+    }
+}

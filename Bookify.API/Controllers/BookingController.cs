@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Common;
+using Bookify.Application.Common;
 using Bookify.Application.DTO.Booking;
 using Bookify.Application.Interfaces;
 using Bookify.Domain.Exceptions;
@@ -38,12 +38,8 @@ namespace Bookify.API.Controllers
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public async Task<IActionResult> Create([FromBody] CreateBookingRequest request)
         {
-            // Clients can only create bookings for themselves
-            if (IsClient && request.ClientId.ToString() != CurrentUserId)
-                throw new ForbiddenException("Clients only can book service");
-
             var result = await _bookingService.CreateAsync(request);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Cancel a booking (Client or Staff).</summary>
@@ -60,7 +56,7 @@ namespace Bookify.API.Controllers
         {
             request.BookingId = id;
             var result = await _bookingService.CancelAsync(request);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Confirm a booking (Staff only).</summary>
@@ -75,7 +71,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> Confirm(Guid id)
         {
             var result = await _bookingService.ConfirmAsync(id);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Complete a booking (Staff only).</summary>
@@ -90,7 +86,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> Complete(Guid id)
         {
             var result = await _bookingService.CompleteAsync(id);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         // ─────────────────────────────────────────────
@@ -105,37 +101,22 @@ namespace Bookify.API.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetClientBookings(Guid clientId)
         {
-            if (!IsAdmin && CurrentUserId != clientId.ToString())
-                return Forbid();
-
             var result = await _bookingService.GetClientBookingsAsync(clientId);
-            return Ok(result);
+            return HandleResult(result);
         }
 
-        /// <summary>Get bookings for a specific staff member.</summary>
-        /// <response code="200">Staff's bookings.</response>
-        /// <response code="403">Cannot view another staff member's bookings.</response>
         [HttpGet("staff/{staffId:guid}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> GetStaffBookings(Guid staffId)
-        {
-            if (!IsAdmin && CurrentUserId != staffId.ToString())
-                return Forbid();
-
-            var result = await _bookingService.GetStaffBookingsAsync(staffId);
-            return Ok(result);
-        }
-
-        /// <summary>Get all bookings with optional filters (Admin only).</summary>
-        /// <response code="200">All bookings (paginated).</response>
-        [HttpGet]
-        [Authorize(Roles = Roles.Admin)]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAll(
-            [FromQuery] DateTime? from = null,
-            [FromQuery] DateTime? to = null,
-            [FromQuery] string? status = null)
+        public async Task<IActionResult> GetStaffBookings(
+            Guid staffId,
+            [FromQuery] string?   status  = null,
+            [FromQuery] DateTime? from    = null,
+            [FromQuery] DateTime? to      = null,
+            [FromQuery] string?   search  = null,
+            [FromQuery] bool      sortAsc = true,
+            [FromQuery] int       page    = 1,
+            [FromQuery] int       pageSize = 10)
         {
             Domain.Enums.BookingStatus? parsed = null;
             if (!string.IsNullOrWhiteSpace(status) &&
@@ -144,8 +125,57 @@ namespace Bookify.API.Controllers
                 parsed = s;
             }
 
-            var result = await _bookingService.GetAllAsync(from, to, parsed);
-            return Ok(result);
+            var result = await _bookingService.GetStaffBookingsPagedAsync(
+                staffId, parsed, from, to, search, sortAsc, page, pageSize);
+            return HandleResult(result);
+        }
+
+        /// <summary>Get occupied slots for a service in a date range.</summary>
+        [HttpGet("service/{serviceId:guid}/occupied-slots")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetOccupiedSlots(
+            Guid serviceId,
+            [FromQuery] DateTime from,
+            [FromQuery] DateTime to)
+        {
+            var result = await _bookingService.GetOccupiedSlotsAsync(serviceId, from, to);
+            return HandleResult(result);
+        }
+
+        [HttpGet("{id:guid}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var result = await _bookingService.GetByIdAsync(id);
+            return HandleResult(result);
+        }
+
+        /// <summary>Get all bookings with optional filters (Admin only).</summary>
+        /// <response code="200">All bookings (paginated).</response>
+        [HttpGet]
+        [Authorize(Roles = Roles.Admin)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAll(
+            [FromQuery] DateTime? from       = null,
+            [FromQuery] DateTime? to         = null,
+            [FromQuery] string?   status     = null,
+            [FromQuery] string?   search     = null,
+            [FromQuery] string?   staffName  = null,
+            [FromQuery] Guid?     categoryId = null,
+            [FromQuery] int       page       = 1,
+            [FromQuery] int       pageSize   = 10)
+        {
+            Domain.Enums.BookingStatus? parsed = null;
+            if (!string.IsNullOrWhiteSpace(status) &&
+                Enum.TryParse<Domain.Enums.BookingStatus>(status, ignoreCase: true, out var s))
+            {
+                parsed = s;
+            }
+
+            var result = await _bookingService.GetAllAsync(from, to, parsed, search, staffName, categoryId, page, pageSize);
+            return HandleResult(result);
         }
     }
 }

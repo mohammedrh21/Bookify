@@ -19,6 +19,23 @@ namespace Bookify.Infrastructure.Repositories
         public async Task<IEnumerable<FAQ>> GetAllAsync()
             => await _db.FAQs.AsNoTracking().ToListAsync();
 
+        public async Task<(IEnumerable<FAQ> Items, int TotalCount)> GetPaginatedAsync(int pageNumber, int pageSize, string? search = null)
+        {
+            var query = _db.FAQs.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(f => f.Question.Contains(search) || f.Answer.Contains(search));
+            }
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+            return (items, totalCount);
+        }
+
         public async Task<FAQ?> GetByIdAsync(Guid id)
             => await _db.FAQs.SingleOrDefaultAsync(x => x.Id == id);
 

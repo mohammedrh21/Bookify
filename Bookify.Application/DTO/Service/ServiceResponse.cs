@@ -1,4 +1,4 @@
-﻿namespace Bookify.Application.DTO.Service
+namespace Bookify.Application.DTO.Service
 {
     public class ServiceResponse
     {
@@ -14,5 +14,11 @@
         public string CategoryName { get; set; } = default!;
         public string StaffName { get; set; } = default!;
         public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public bool IsActive { get; set; }
+        public double Rating { get; set; }
+        public int ReviewCount { get; set; }
+        public string? ImagePath { get; set; }
+        public string? StaffImagePath { get; set; }
     }
 }

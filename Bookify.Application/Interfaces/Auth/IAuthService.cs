@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Common;
+using Bookify.Application.Common;
 using Bookify.Application.DTO.Auth;
 using Bookify.Application.DTO.Identity;
 using System;
@@ -14,5 +14,10 @@ namespace Bookify.Application.Interfaces.Auth
         Task<ServiceResponse<LoginResponse>> LoginAsync(LoginRequest request);
         Task<ServiceResponse<LoginResponse>> RefreshTokenAsync(RefreshTokenRequest request);
         Task<ServiceResponse<bool>> RevokeTokenAsync(string userId);
+
+        // Forgot Password
+        Task<ServiceResponse<bool>> ForgotPasswordAsync(ForgotPasswordRequest request);
+        Task<ServiceResponse<string>> VerifyOtpAsync(VerifyOtpRequest request); // Returns ResetToken
+        Task<ServiceResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request);
     }
 }

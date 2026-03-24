@@ -1,9 +1,6 @@
-﻿@page "/services/create-service"
+@page "/services/create-service"
 @attribute [Authorize(Roles = "Staff")]
-@inject IServiceApiService ServiceService
-@inject ICategoryService CategoryService
-@inject IAuthService Auth
-@inject NavigationManager Nav
+
 
 <PageTitle>Create Service — Bookify</PageTitle>
 
@@ -62,56 +59,4 @@
     }
 </div>
 
-@code {
-    private ServiceModel _model = new();
-    private List<CategoryModel> _categories = new();
-    private Guid _staffId;
-    private bool _isProcessing = false;
-    private int _currentStep = 1;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var staff = await Auth.GetUserIdAsync();
-        if (staff != null)
-            _staffId = (Guid)staff;
-
-        var result = await CategoryService.GetAllAsync();
-        _categories = (result.Data ?? [])
-                        .Where(x => x.IsActive)
-                        .ToList();
-    }
-
-    private void NextStep()
-    {
-        // Ideally we would validate just the first step's fields here,
-        // but for simplicity we move to step 2 and rely on full validation on submit.
-        _currentStep = 2;
-    }
-
-    private void PreviousStep()
-    {
-        _currentStep = 1;
-    }
-
-    private async Task HandleValidSubmit()
-    {
-        // If we are artificially submitting on step 1 (e.g. by hitting Enter), prevent it
-        if (_currentStep == 1)
-        {
-            NextStep();
-            return;
-        }
-
-        _isProcessing = true;
-        _model.StaffId = _staffId;
-        try
-        {
-            var result = await ServiceService.CreateAsync(_model);
-            if (result.Success) Nav.NavigateTo("/services/my-service");
-        }
-        finally
-        {
-            _isProcessing = false;
-        }
-    }
-}
+

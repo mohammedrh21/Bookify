@@ -1,7 +1,4 @@
 @page "/login"
-@inject IAuthService AuthService
-@inject NavigationManager Nav
-
 <PageTitle>Login — Bookify</PageTitle>
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100 py-12 px-4">
@@ -10,38 +7,54 @@
             <!-- Logo -->
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-14 h-14 bg-primary-600 rounded-2xl shadow-lg mb-3">
-                    <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                    <i class="fa-solid fa-calendar-check text-white text-2xl"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-gray-900">Welcome back</h1>
                 <p class="text-gray-400 text-sm mt-1">Sign in to your Bookify account</p>
             </div>
 
-            <AlertMessage Message="@_error" Type="error" />
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3 text-red-700 animate-fade-in shadow-sm">
+                    <i class="fa-solid fa-circle-exclamation text-red-500 mt-1"></i>
+                    <p class="text-sm font-medium">@_error</p>
+                </div>
+            }
 
             <EditForm Model="_model" OnValidSubmit="HandleLogin" class="space-y-5">
                 <DataAnnotationsValidator />
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                    <InputText @bind-Value="_model.Email" type="email"
-                               class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 text-sm transition-all"
-                               placeholder="you@example.com" />
-                    <ValidationMessage For="() => _model.Email" />
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Email</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <InputText @bind-Value="_model.Email" type="email"
+                                   class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 text-sm transition-all"
+                                   placeholder="you@example.com" />
+                    </div>
+                    <ValidationMessage For="() => _model.Email" class="text-xs text-red-500 mt-1 ml-1" />
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                    <InputText @bind-Value="_model.Password" type="password"
-                               class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 text-sm transition-all"
-                               placeholder="••••••••" />
-                    <ValidationMessage For="() => _model.Password" />
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <InputText @bind-Value="_model.Password" type="@(_showPassword ? "text" : "password")"
+                                   class="w-full pl-11 pr-12 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 text-sm transition-all"
+                                   placeholder="••••••••" />
+                        <button type="button" @onclick="TogglePassword" 
+                                class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-600 transition-colors">
+                            <i class="fa-solid @(_showPassword ? "fa-eye-slash" : "fa-eye")"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-end mt-1 mr-1">
+                        <a href="/forgot-password" class="text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors">Forgot password?</a>
+                    </div>
+                    <ValidationMessage For="() => _model.Password" class="text-xs text-red-500 mt-1 ml-1" />
                 </div>
 
                 <button type="submit" disabled="@_loading"
-                        class="w-full py-3.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white font-bold rounded-xl text-sm transition-all shadow-sm flex items-center justify-center gap-2">
+                        class="w-full py-4 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white font-bold rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 mt-2">
                     @if (_loading)
                     {
                         <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -50,39 +63,15 @@
                     else
                     {
                         <span>Sign In</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket ml-1"></i>
                     }
                 </button>
             </EditForm>
 
-            <p class="text-center text-sm text-gray-400 mt-6">
+            <p class="text-center text-sm text-gray-400 mt-8">
                 Don't have an account?
-                <a href="/register" class="text-primary-600 font-semibold hover:text-primary-700">Sign up</a>
+                <a href="/register" class="text-primary-600 font-semibold hover:text-primary-700 transition-colors">Sign up</a>
             </p>
         </div>
     </div>
 </div>
-
-@code {
-    private LoginRequest _model = new();
-    private string _error = string.Empty;
-    private bool _loading = false;
-
-    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
-
-    private async Task HandleLogin()
-    {
-        _loading = true;
-        _error = string.Empty;
-        StateHasChanged();
-
-        var result = await AuthService.LoginAsync(_model);
-
-        if (result.Success)
-            Nav.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
-        else
-        {
-            _error = result.Message ?? "Login failed. Please check your credentials.";
-            _loading = false;
-        }
-    }
-}

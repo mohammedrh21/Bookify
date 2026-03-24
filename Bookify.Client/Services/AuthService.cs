@@ -18,6 +18,11 @@ public interface IAuthService
     Task<string?> GetTokenAsync();
     Task<string?> GetUserRoleAsync();
     Task<Guid?> GetUserIdAsync();
+
+    // Forgot Password
+    Task<ApiResult<bool>> ForgotPasswordAsync(ForgotPasswordRequestModel request);
+    Task<ApiResult<string>> VerifyOtpAsync(VerifyOtpRequestModel request);
+    Task<ApiResult<bool>> ResetPasswordAsync(ResetPasswordRequestModel request);
 }
 
 // ── Implementation ───────────────────────────────────────────────────────────
@@ -89,7 +94,6 @@ public class AuthService(
         if (!httpResponse.IsSuccessStatusCode)
         {
             var errors = await ReadErrorMessagesAsync(httpResponse, "Login failed. Please check your credentials.");
-            ShowErrors(errors);
             return ApiResult<LoginResponseModel>.Fail(errors.FirstOrDefault() ?? "Error");
         }
 
@@ -97,7 +101,6 @@ public class AuthService(
         if (result?.Data is null)
         {
             const string msg = "Login failed — unexpected server response.";
-            toast.ShowError(msg);
             return ApiResult<LoginResponseModel>.Fail(msg);
         }
 
@@ -111,7 +114,6 @@ public class AuthService(
         ((Auth.BookifyAuthStateProvider)authStateProvider)
             .NotifyUserAuthenticated(login.AccessToken);
 
-        toast.ShowSuccess(result.Message ?? "Welcome back!");
         return ApiResult<LoginResponseModel>.Ok(login, result.Message);
     }
 
@@ -129,13 +131,11 @@ public class AuthService(
         if (!httpResponse.IsSuccessStatusCode)
         {
             var errors = await ReadErrorMessagesAsync(httpResponse, "Registration failed. Please try again.");
-            ShowErrors(errors);
             return ApiResult<Guid>.Fail(errors.FirstOrDefault() ?? "Error");
         }
 
         var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
         var msg = result?.Message ?? "Client registered successfully.";
-        toast.ShowSuccess(msg);
         return ApiResult<Guid>.Ok(result?.Id ?? Guid.Empty, msg);
     }
 
@@ -152,13 +152,11 @@ public class AuthService(
         if (!httpResponse.IsSuccessStatusCode)
         {
             var errors = await ReadErrorMessagesAsync(httpResponse, "Registration failed. Please try again.");
-            ShowErrors(errors);
             return ApiResult<Guid>.Fail(errors.FirstOrDefault() ?? "Error");
         }
 
         var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
         var msg = result?.Message ?? "Staff registered successfully.";
-        toast.ShowSuccess(msg);
         return ApiResult<Guid>.Ok(result?.Id ?? Guid.Empty, msg);
     }
 
@@ -182,5 +180,47 @@ public class AuthService(
     {
         var raw = await localStorage.GetItemAsync<string>("user_id");
         return Guid.TryParse(raw, out var id) ? id : null;
+    }
+
+    public async Task<ApiResult<bool>> ForgotPasswordAsync(ForgotPasswordRequestModel request)
+    {
+        var httpResponse = await http.PostAsJsonAsync("api/auth/forgot-password", request);
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errors = await ReadErrorMessagesAsync(httpResponse, "Failed to initiate password reset.");
+            return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
+        }
+
+        var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+        return ApiResult<bool>.Ok(true, result?.Message);
+    }
+
+    public async Task<ApiResult<string>> VerifyOtpAsync(VerifyOtpRequestModel request)
+    {
+        var httpResponse = await http.PostAsJsonAsync("api/auth/verify-otp", request);
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errors = await ReadErrorMessagesAsync(httpResponse, "OTP verification failed.");
+            return ApiResult<string>.Fail(errors.FirstOrDefault() ?? "Error");
+        }
+
+        var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<string>>();
+        return ApiResult<string>.Ok(result?.Data ?? string.Empty, result?.Message);
+    }
+
+    public async Task<ApiResult<bool>> ResetPasswordAsync(ResetPasswordRequestModel request)
+    {
+        var httpResponse = await http.PostAsJsonAsync("api/auth/reset-password", request);
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errors = await ReadErrorMessagesAsync(httpResponse, "Password reset failed.");
+            return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
+        }
+
+        var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+        return ApiResult<bool>.Ok(true, result?.Message);
     }
 }

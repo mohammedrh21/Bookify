@@ -1,161 +1,122 @@
 @page "/book/{ServiceId:guid}"
 @attribute [Authorize]
-@inject IServiceApiService ServiceService
-@inject IBookingService BookingService
-@inject NavigationManager Nav
-@inject AuthenticationStateProvider AuthStateProvider
+@using Bookify.Client.Components.UI.Modals
 
 <PageTitle>Book Service — Bookify</PageTitle>
 
-<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-    <a href="/services"
-       class="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-primary-600 mb-6 transition-colors">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to services
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <a href="/service/@ServiceId"
+       class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-primary-600 mb-8 transition-colors">
+        <i class="fas fa-arrow-left"></i>
+        Back to service details
     </a>
 
     @if (_loading)
     {
-        <LoadingSpinner Message="Loading service details..." />
+        <div class="flex flex-col items-center justify-center py-20">
+            <div class="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-gray-500 font-medium">Loading booking options...</p>
+        </div>
     }
     else if (_service is null)
     {
-        <EmptyState Icon="❌" Title="Service not found"
-                    Message="This service may no longer be available."
-                    ActionHref="/services" ActionLabel="Browse Services" />
+        <div class="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+            <div class="text-5xl mb-4">🔍</div>
+            <h2 class="text-2xl font-bold text-gray-900">Service Not Found</h2>
+            <p class="text-gray-500 mt-2">This service may no longer be available.</p>
+        </div>
     }
     else
     {
-        <!-- Service Summary -->
-        <div class="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-            <div class="flex items-start justify-between mb-4">
-                <div class="flex-1 pr-4">
-                    <h1 class="text-2xl font-bold text-gray-900">@_service.Name</h1>
-                    <p class="text-gray-400 text-sm mt-1">@_service.Description</p>
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
+            <!-- Left Column: Service Info & Selection Summary -->
+            <div class="lg:col-span-2 space-y-6 lg:sticky lg:top-10">
+                <div class="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+                    <div class="mb-6">
+                        <span class="px-3 py-1 bg-primary-50 text-primary-700 text-[10px] font-black rounded-full uppercase tracking-widest">
+                            Booking Summary
+                        </span>
+                        <h1 class="text-3xl font-black text-gray-900 mt-3">@_service.Name</h1>
+                        <p class="text-gray-500 text-sm mt-2 leading-relaxed">@_service.Description</p>
+                    </div>
+
+                    <div class="space-y-4 pt-6 border-t border-gray-50 mb-8">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400 font-medium">Professional</span>
+                            <span class="text-gray-900 font-bold">@_service.StaffName</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400 font-medium">Duration</span>
+                            <span class="text-gray-900 font-bold">@_service.Duration min</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400 font-medium">Price</span>
+                            <span class="text-primary-600 font-black text-lg">$@_service.Price.ToString("F2")</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-primary-50/50 rounded-2xl p-5 mb-8 border border-primary-100/50">
+                        <p class="text-[10px] text-primary-400 font-black uppercase tracking-widest mb-2">Selected Time</p>
+                        @if (_timeSelected)
+                        {
+                            <div class="flex items-center gap-3 text-primary-900">
+                                <i class="fas fa-calendar-check text-primary-500"></i>
+                                <span class="font-bold">@_selectedDate.ToString("MMM dd, yyyy")</span>
+                                <span class="w-1 h-1 rounded-full bg-primary-200"></span>
+                                <span class="font-bold">@DateTime.Today.Add(_selectedTime).ToString("hh:mm tt")</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-primary-300 text-sm italic">Please select a slot from the calendar</p>
+                        }
+                    </div>
+
+                    <button @onclick="HandleProceedToPayment" disabled="@(!_timeSelected || _booking)"
+                            class="w-full py-5 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 disabled:opacity-50 text-white font-extrabold rounded-2xl text-lg transition-all shadow-xl shadow-primary-500/20 hover:shadow-primary-500/40 flex items-center justify-center gap-3">
+                        @if (_booking)
+                        {
+                            <div class="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>Finalizing...</span>
+                        }
+                        else
+                        {
+                            <i class="fas fa-lock"></i>
+                            <span>Proceed to Payment</span>
+                        }
+                    </button>
+                    
+                    @if (!_timeSelected)
+                    {
+                        <p class="text-center text-amber-600 text-[10px] mt-4 font-bold uppercase tracking-wider">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            Selection Required
+                        </p>
+                    }
                 </div>
-                <div class="text-right shrink-0">
-                    <p class="text-2xl font-bold text-primary-600">$@_service.Price.ToString("F2")</p>
-                    <p class="text-xs text-gray-400">@_service.Duration min session</p>
+
+                <div class="p-6 bg-gray-50 rounded-3xl border border-gray-100 flex gap-4 items-center">
+                    <div class="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-primary-500">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-900">Secure Appointment</h4>
+                        <p class="text-xs text-gray-500 mt-0.5">Your data and payment are protected.</p>
+                    </div>
                 </div>
             </div>
-            <div class="flex items-center gap-2 text-sm text-gray-500 border-t border-gray-50 pt-4">
-                <svg class="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Staff: <span class="font-semibold text-gray-700 ml-1">@_service.StaffName</span>
-            </div>
-        </div>
 
-        <!-- Booking Form -->
-        <div class="bg-white rounded-2xl border border-gray-100 p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-5">Select Date & Time</h2>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Date</label>
-                    <input type="date"
-                           value="@_selectedDate.ToString("yyyy-MM-dd")"
-                           @onchange="OnDateChanged"
-                           min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")"
-                           class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 text-sm" />
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Time</label>
-                    <input type="time"
-                           value="@_selectedTime.ToString(@"hh\:mm")"
-                           @onchange="OnTimeChanged"
-                           class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300 text-sm" />
-                </div>
-
-                <button @onclick="HandleBooking" disabled="@_booking"
-                        class="w-full py-4 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 mt-2">
-                    @if (_booking)
-                    {
-                        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Confirming...</span>
-                    }
-                    else
-                    {
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span>Confirm Booking</span>
-                    }
-                </button>
+            <!-- Right Column: Interactive Calendar -->
+            <div class="lg:col-span-3">
+                <BookingCalendar ServiceId="ServiceId" 
+                                 SelectedDate="@_selectedDate"
+                                 SelectedTime="@_selectedTime"
+                                 StartHour="@_service.TimeStart"
+                                 EndHour="@_service.TimeEnd"
+                                 IntervalMinutes="@_service.Duration"
+                                 OnDateSelected="d => OnDateChanged(d)"
+                                 OnTimeSelected="t => { _selectedTime = t; _timeSelected = true; }" />
             </div>
         </div>
     }
 </div>
-
-@code {
-    [Parameter] public Guid ServiceId { get; set; }
-
-    private ServiceModel? _service;
-    private bool _loading = true;
-    private bool _booking = false;
-    private DateTime _selectedDate = DateTime.Today.AddDays(1);
-    private TimeSpan _selectedTime = new TimeSpan(9, 0, 0);
-
-    protected override async Task OnInitializedAsync()
-    {
-        var result = await ServiceService.GetByIdAsync(ServiceId);
-        _service = result.Data;
-        _loading = false;
-    }
-
-    private void OnDateChanged(ChangeEventArgs e)
-    {
-        if (DateTime.TryParse(e.Value?.ToString(), out var d))
-            _selectedDate = d;
-    }
-
-    private void OnTimeChanged(ChangeEventArgs e)
-    {
-        if (TimeSpan.TryParse(e.Value?.ToString(), out var t))
-            _selectedTime = t;
-    }
-
-    private async Task HandleBooking()
-    {
-        if (_selectedDate <= DateTime.Today)
-            return;
-
-        _booking = true;
-        StateHasChanged();
-
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var clientIdStr = authState.User.FindFirst("sub")?.Value
-                       ?? authState.User.FindFirst("nameid")?.Value;
-
-        if (!Guid.TryParse(clientIdStr, out var clientId))
-        {
-            _booking = false;
-            return;
-        }
-
-        var request = new CreateBookingRequest
-        {
-            ClientId = clientId,
-            ServiceId = _service!.Id,
-            StaffId = _service.StaffId,
-            Date = _selectedDate,
-            Time = _selectedTime
-        };
-
-        var result = await BookingService.CreateAsync(request);
-
-        if (result.Success)
-        {
-            StateHasChanged();
-            await Task.Delay(1400);
-            Nav.NavigateTo("/my-bookings");
-        }
-        else
-            _booking = false;
-    }
-}

@@ -1,4 +1,4 @@
-﻿@inject IAuthService AuthService
+@inject IAuthService AuthService
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILocalStorageService localStorage
@@ -20,79 +20,63 @@
 
             <!-- Desktop Nav Links -->
             <div class="hidden md:flex items-center gap-6">
-                <NavLink href="/" Match="NavLinkMatch.All"
-                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                         ActiveClass="text-primary-600 font-semibold">
-                    Home
-                </NavLink>
-
-                <AuthorizeView Roles="Admin,Client,Staff">
+                <AuthorizeView>
                     <Authorized>
-                        <AuthorizeView Roles="Client">
-                            <Authorized Context="clientUser">
-                                <NavLink href="/my-bookings"
-                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                         ActiveClass="text-primary-600 font-semibold">
-                                    My Bookings
-                                </NavLink>
-                                <NavLink href="/services"
-                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                         ActiveClass="text-primary-600 font-semibold">
-                                    Services
-                                </NavLink>
-
-                                <NavLink href="/about"
-                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                         ActiveClass="text-primary-600 font-semibold">
-                                    About
-                                </NavLink>
-
-                                <NavLink href="/contact-us"
-                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                         ActiveClass="text-primary-600 font-semibold">
-                                    Contact Us
-                                </NavLink>
-
-                                <NavLink href="/support"
-                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                         ActiveClass="text-primary-600 font-semibold">
-                                    Support & FAQs
-                                </NavLink>
+                        <AuthorizeView Roles="Client" Context="clientContext">
+                            <Authorized>
+                                <NavLink href="/" Match="NavLinkMatch.All" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Home</NavLink>
+                                <NavLink href="/services" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Services</NavLink>
+                                <NavLink href="/my-bookings" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">My Bookings</NavLink>
+                                <NavLink href="/about" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">About</NavLink>
+                                <NavLink href="/contact" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Reach Us</NavLink>
+                                <NavLink href="/faq" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">FAQs</NavLink>
                             </Authorized>
                         </AuthorizeView>
 
-                        <AuthorizeView Roles="Admin">
-                            <Authorized Context="adminUser">
-                                <NavLink href="/admin/dashboard"
-                                         class="text-gray-900 hover:text-alert-800 hover:bg-primary-950 font-medium text-sm transition-colors"
-                                         ActiveClass="text-primary-600 font-semibold">
-                                    Dashboard
-                                </NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Staff">
-                            <Authorized Context="staffUser">
-                                <NavLink href="/services/my-service"
-                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                         ActiveClass="text-primary-600 font-semibold">
-                                    My Service
-                                </NavLink>
-                                <NavLink href="/booking/service-bookings"
-                                         class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                         ActiveClass="text-primary-600 font-semibold">
-                                    Booking History
-                                </NavLink>
+                        <AuthorizeView Roles="Admin" Context="adminContext">
+                            <Authorized>
+                                <NavLink href="/admin/dashboard" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Dashboard</NavLink>
+                                <NavLink href="/admin/categories" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Categories</NavLink>
+                                <NavLink href="/admin/bookings" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Supervise Bookings</NavLink>
+                                <NavLink href="/admin/staff" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Manage Staff</NavLink>
+                                <NavLink href="/admin/clients" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Clients</NavLink>
+                                <NavLink href="/admin/services" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Services</NavLink>
+                                <NavLink href="/admin/service-approvals" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Service Approvals</NavLink>
+                                <NavLink href="/admin/tickets" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Tickets</NavLink>
+                                <NavLink href="/admin/faqs" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">FAQs</NavLink>
                             </Authorized>
                         </AuthorizeView>
 
-                        <!-- User Menu -->
+                        <AuthorizeView Roles="Staff" Context="staffContext">
+                            <Authorized>
+                                <NavLink href="/staff/dashboard" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">My Dashboard</NavLink>
+                                <NavLink href="/booking/service-bookings" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Bookings History</NavLink>
+                                <NavLink href="/services/my-service" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">My Service</NavLink>
+                                <NavLink href="/staff/reviews" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Service Reviews</NavLink>
+                            </Authorized>
+                        </AuthorizeView>
+                    </Authorized>
+                    <NotAuthorized>
+                        <NavLink href="/" Match="NavLinkMatch.All" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Home</NavLink>
+                        <NavLink href="/services" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Services</NavLink>
+                        <NavLink href="/about" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">About</NavLink>
+                        <NavLink href="/contact" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Reach Us</NavLink>
+                        <NavLink href="/faq" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">FAQs</NavLink>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+
+            <!-- User Menu -->
+            <div class="flex items-center gap-4">
+                <AuthorizeView>
+                    <Authorized>
                         <div class="relative">
                             <button @onclick="ToggleMenu"
                                     class="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary-50 hover:bg-primary-100 transition-colors">
                                 <div class="w-7 h-7 bg-primary-600 rounded-full flex items-center justify-center">
                                     <span class="text-white text-xs font-bold">@GetInitial()</span>
                                 </div>
-                                <span class="text-sm font-medium text-primary-700">@_userName</span>
+                                <span class="hidden sm:inline text-sm font-medium text-primary-700">@_userName</span>
                                 <svg class="w-4 h-4 text-primary-500 transition-transform @(_menuOpen ? "rotate-180" : "")"
                                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -101,135 +85,87 @@
 
                             @if (_menuOpen)
                             {
-                                <AuthorizeView Roles="Client">
-                                    <Authorized Context="clientcontext">
-                                        <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50">
-                                            <NavLink href="/my-bookings"
-                                                    class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
-                                                My Bookings
-                                            </NavLink>
-                                        </div>
-                                    </Authorized>
-                                </AuthorizeView>
                                 <div class="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50">
+                                    <a href="@_profileRoute"
+                                       class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                        <i class="fas fa-user-circle"></i>
+                                        My Profile
+                                    </a>
+                                    <div class="border-t border-gray-50 my-1"></div>
                                     <button @onclick="Logout"
                                             class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
+                                        <i class="fas fa-sign-out-alt"></i>
                                         Logout
                                     </button>
                                 </div>
                             }
                         </div>
                     </Authorized>
-
                     <NotAuthorized>
-                        <NavLink href="/services"
-                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                 ActiveClass="text-primary-600 font-semibold">
-                            Services
-                        </NavLink>
-
-                        <NavLink href="/about"
-                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                 ActiveClass="text-primary-600 font-semibold">
-                            About
-                        </NavLink>
-
-                        <NavLink href="/contact-us"
-                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                 ActiveClass="text-primary-600 font-semibold">
-                            Contact Us
-                        </NavLink>
-
-                        <NavLink href="/support"
-                                 class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors"
-                                 ActiveClass="text-primary-600 font-semibold">
-                            Support & FAQs
-                        </NavLink>
-                        <a href="/login"
-                           class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors">
-                            Log in
-                        </a>
-                        <a href="/register"
-                           class="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white font-semibold rounded-xl text-sm transition-all shadow-md hover:shadow-lg hover:shadow-primary-500/30">
-                            Sign up
-                        </a>
+                        <div class="hidden md:flex items-center gap-3">
+                            <a href="/login" class="text-gray-600 hover:text-primary-600 font-medium text-sm">Log in</a>
+                            <a href="/register" class="px-5 py-2 bg-primary-600 text-white font-semibold rounded-xl text-sm hover:bg-primary-700 transition-colors">Sign up</a>
+                        </div>
                     </NotAuthorized>
                 </AuthorizeView>
-            </div>
 
-            <!-- Mobile Hamburger -->
-            <button @onclick="ToggleMobileMenu"
-                    class="md:hidden p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors">
-                @if (_mobileMenuOpen)
-                {
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                }
-                else
-                {
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                }
-            </button>
+                <!-- Mobile Hamburger -->
+                <button @onclick="ToggleMobileMenu"
+                        class="md:hidden p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors">
+                    @if (_mobileMenuOpen)
+                    {
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    }
+                </button>
+            </div>
         </div>
 
         <!-- Mobile Menu -->
         @if (_mobileMenuOpen)
         {
             <div class="md:hidden border-t border-gray-100 py-4 space-y-1">
-                <a href="/" class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">Home</a>
-                <a href="/services" class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">Services</a>
-
-                <AuthorizeView Roles="Admin,Staff,Client">
-                    <Authorized Context="authUserMobile">
-                        <AuthorizeView Roles="Client">
-                            <Authorized Context="clientUserMobile">
-                                <a href="/my-bookings"
-                                   class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
-                                    My Bookings
-                                </a>
+                <AuthorizeView>
+                    <Authorized>
+                        <AuthorizeView Roles="Client" Context="mClient">
+                            <Authorized>
+                                <a href="/" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Home</a>
+                                <a href="/services" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Services</a>
+                                <a href="/my-bookings" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">My Bookings</a>
                             </Authorized>
                         </AuthorizeView>
-
-                        <AuthorizeView Roles="Admin">
-                            <Authorized Context="adminUserMobile">
-                                <a href="/admin/dashboard"
-                                   class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
-                                    Dashboard
-                                </a>
+                        <AuthorizeView Roles="Admin" Context="mAdmin">
+                            <Authorized>
+                                <a href="/admin/dashboard" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Dashboard</a>
+                                <a href="/admin/bookings" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Bookings</a>
+                                <a href="/admin/staff" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Staff</a>
+                                <a href="/admin/clients" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Clients</a>
+                                <a href="/admin/service-approvals" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Service Approvals</a>
                             </Authorized>
                         </AuthorizeView>
-
-                        <AuthorizeView Roles="Staff">
-                            <Authorized Context="staffUserMobile">
-                                <a href="/services/my-service"
-                                   class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
-                                    My Service
-                                </a>
-                                <a href="/booking/service-bookings"
-                                   class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
-                                    Booking History
-                                </a>
+                        <AuthorizeView Roles="Staff" Context="mStaff">
+                            <Authorized>
+                                <a href="/staff/dashboard" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Dashboard</a>
+                                <a href="/booking/service-bookings" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Bookings</a>
+                                <a href="/staff/reviews" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Reviews</a>
                             </Authorized>
                         </AuthorizeView>
-                        <button @onclick="Logout"
-                                class="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl">
-                            Logout
-                        </button>
-
+                        <a href="@_profileRoute" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">
+                            <i class="fas fa-user-circle mr-2 text-gray-400"></i>My Profile
+                        </a>
+                        <button @onclick="Logout" class="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl">Logout</button>
                     </Authorized>
-
                     <NotAuthorized>
-                        <a href="/login"
-                           class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl">
-                            Log in
-                        </a>
-                        <a href="/register"
-                           class="block mx-4 py-3 text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-indigo-600 rounded-xl text-center shadow-md">
-                            Sign up
-                        </a>
+                        <a href="/" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Home</a>
+                        <a href="/login" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Log in</a>
+                        <a href="/register" class="block px-4 py-2 text-sm font-semibold text-primary-600">Sign up</a>
                     </NotAuthorized>
                 </AuthorizeView>
             </div>
@@ -241,11 +177,29 @@
     private bool _menuOpen = false;
     private bool _mobileMenuOpen = false;
     private string _userName = string.Empty;
+    private string _profileRoute = "/";
 
     protected override async Task OnInitializedAsync()
     {
+        await UpdateUserInfo();
+        // Subscribe to auth state changes if needed, or just refresh on render
+    }
+
+    private async Task UpdateUserInfo()
+    {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        _userName = await localStorage.GetItemAsync<string>("user_name") ?? "User";
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            _userName = await localStorage.GetItemAsync<string>("user_name") ?? "User";
+            var role = await AuthService.GetUserRoleAsync();
+            _profileRoute = role switch
+            {
+                "Admin"  => "/admin/profile",
+                "Staff"  => "/staff/profile",
+                "Client" => "/client/profile",
+                _        => "/"
+            };
+        }
     }
 
     private void ToggleMenu() => _menuOpen = !_menuOpen;

@@ -1,0 +1,112 @@
+@page "/contact"
+@using Bookify.Client.Models.ContactInfo
+@using Bookify.Client.Services
+
+<PageTitle>Contact Us — Bookify</PageTitle>
+
+<div class="bg-gradient-to-tl from-indigo-50 via-white to-primary-50 py-16 min-h-screen relative overflow-hidden">
+    <!-- Decorative background elements -->
+    <div class="absolute top-20 right-0 w-96 h-96 bg-primary-100 rounded-full blur-3xl opacity-30 pointer-events-none"></div>
+    <div class="absolute bottom-10 left-0 w-80 h-80 bg-indigo-100 rounded-full blur-3xl opacity-40 pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        
+        <div class="text-center max-w-3xl mx-auto mb-16 animate-fade-in-up">
+            <h1 class="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-4">
+                Get in <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-600">Touch</span>
+            </h1>
+            <p class="text-lg text-gray-500">
+                We'd love to hear from you. Reach out to us for any inquiries, partnerships, or support.
+            </p>
+        </div>
+
+        @if (_loading)
+        {
+            <div class="flex justify-center py-20">
+                <LoadingSpinner Message="Connecting..." />
+            </div>
+        }
+        else
+        {
+            <div class="grid lg:grid-cols-10 gap-12 items-stretch max-w-6xl mx-auto animate-fade-in mb-12">
+                
+                <!-- Contact Information (40%) -->
+                <div class="lg:col-span-4 space-y-8">
+                    <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-gray-200/50 border border-gray-100 h-full">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6 font-primary">Contact Information</h2>
+                        
+                        <div class="space-y-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-900">Our Office</h4>
+                                    <p class="text-gray-500 text-sm mt-1 leading-relaxed">
+                                        @(_info?.AddressLine_1 ?? "123 Business Ave")<br />
+                                        @if (!string.IsNullOrEmpty(_info?.AddressLine_2))
+                                        {
+                                            @(_info.AddressLine_2)<br />
+                                        }
+                                        @(_info?.Country ?? "United States")
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-900">Email Us</h4>
+                                    <p class="text-gray-500 text-sm mt-1">
+                                        <a href="mailto:@(_info?.Email ?? "hello@bookify.com")" class="hover:text-primary-600 font-bold transition-colors">
+                                            @(_info?.Email ?? "hello@bookify.com")
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-900">Reach Us</h4>
+                                    <div class="text-gray-500 text-sm mt-1 leading-relaxed">
+                                        @if (_info != null)
+                                        {
+                                            <p>@_info.CallDayFrom - @_info.CallDayTo</p>
+                                            <p>@_info.CallHourFrom.ToString(@"hh\:mm") to @_info.CallHourTo.ToString(@"hh\:mm")</p>
+                                            <a href="tel:@_info.PhoneNumber" class="hover:text-primary-600 font-black transition-colors mt-2 block text-lg">@_info.PhoneNumber</a>
+                                        }
+                                        else
+                                        {
+                                            <p>Mon-Fri from 9am to 6pm.</p>
+                                            <a href="tel:+1234567890" class="hover:text-primary-600 font-bold transition-colors">+1 (555) 123-4567</a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-12 pt-8 border-t border-gray-50">
+                            <p class="text-sm text-gray-400 font-medium mb-4">Follow our journey</p>
+                            <div class="flex gap-3">
+                                <a href="#" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-primary-600 hover:text-white transition-all"><i class="fab fa-twitter"></i></a>
+                                <a href="#" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-primary-600 hover:text-white transition-all"><i class="fab fa-instagram"></i></a>
+                                <a href="#" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-primary-600 hover:text-white transition-all"><i class="fab fa-linkedin-in"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Support Ticket Form (60%) -->
+                <div class="lg:col-span-6">
+                    <SupportForm />
+                </div>
+
+            </div>
+        }
+    </div>
+</div>

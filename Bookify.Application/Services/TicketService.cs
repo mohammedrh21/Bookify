@@ -1,6 +1,7 @@
 using AutoMapper;
 using Bookify.Application.Common;
 using Bookify.Application.DTO.SupportTicket;
+using Bookify.Application.DTO.Common;
 using Bookify.Application.Interfaces;
 using Bookify.Application.Interfaces.Ticket;
 using Bookify.Domain.Contracts.SupportTicket;
@@ -25,14 +26,20 @@ namespace Bookify.Application.Services
             _logger = logger;
         }
 
-        public async Task<ServiceResponse<IEnumerable<TicketResponse>>> GetAllAsync()
+        public async Task<ServiceResponse<PagedResult<TicketResponse>>> GetAllAsync(PaginationParams paginationParams)
         {
-            _logger.LogInformation("Fetching all support tickets");
-            var tickets = await _repo.GetAllAsync();
-            var sortedTickets = tickets.OrderByDescending(t => t.CreatedAt).ToList();
+            _logger.LogInformation($"Fetching support tickets: Page {paginationParams.PageNumber}, Size {paginationParams.PageSize}");
+            var (tickets, totalCount) = await _repo.GetPaginatedAsync(paginationParams.PageNumber, paginationParams.PageSize);
+            
+            var pagedResult = new PagedResult<TicketResponse>
+            {
+                Items = _mapper.Map<IEnumerable<TicketResponse>>(tickets),
+                TotalCount = totalCount,
+                PageNumber = paginationParams.PageNumber,
+                PageSize = paginationParams.PageSize
+            };
 
-            return ServiceResponse<IEnumerable<TicketResponse>>.Ok(
-                data: _mapper.Map<IEnumerable<TicketResponse>>(sortedTickets));
+            return ServiceResponse<PagedResult<TicketResponse>>.Ok(data: pagedResult);
         }
 
         public async Task<ServiceResponse<Guid>> SubmitAsync(CreateTicketRequest request)
@@ -64,6 +71,24 @@ namespace Bookify.Application.Services
                 id: ticket.Id,
                 data: ticket.Id,
                 message: "Support ticket submitted successfully.");
+        }
+    
+        public async Task<ServiceResponse<bool>> MarkAsReadAsync(Guid id)
+        {
+            _logger.LogInformation($"Marking ticket {id} as read");
+            var ticket = await _repo.GetByIdAsync(id);
+            if (ticket == null)
+            {
+                return ServiceResponse<bool>.Fail("Ticket not found.");
+            }
+
+            if (!ticket.IsRead)
+            {
+                ticket.IsRead = true;
+                await _repo.SaveChangesAsync();
+            }
+
+            return ServiceResponse<bool>.Ok(data: true);
         }
     }
 }

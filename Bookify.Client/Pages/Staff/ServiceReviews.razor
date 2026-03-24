@@ -1,0 +1,254 @@
+@page "/staff/reviews"
+@attribute [Authorize(Roles = "Staff")]
+@using Bookify.Client.Services
+@inject IReviewApiService ReviewApi
+@inject IServiceApiService ServiceApi
+@inject IAuthService AuthService
+
+<PageTitle>Service Reviews — Staff</PageTitle>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <!-- Header -->
+    <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+            <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">Client Reviews</h1>
+            <p class="text-gray-500 mt-2 text-lg">See what your clients are saying about your service.</p>
+        </div>
+        
+        @if (_statsLoaded && _totalReviews > 0)
+        {
+            <div class="bg-white px-6 py-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6">
+                <div class="text-center">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total</p>
+                    <p class="text-3xl font-extrabold text-gray-900">@_totalReviews</p>
+                </div>
+                <div class="w-px h-10 bg-gray-100"></div>
+                <div class="text-center">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Average</p>
+                    <div class="flex items-center gap-1">
+                        <p class="text-3xl font-extrabold text-gray-900">@_averageRating.ToString("F1")</p>
+                        <i class="fa-solid fa-star text-yellow-400 text-lg"></i>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm mb-8 flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <div class="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 hide-scroll">
+            @foreach (var r in new int?[] { null, 5, 4, 3, 2, 1 })
+            {
+                <button @onclick="() => FilterByRating(r)" 
+                        class="px-5 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap transition-colors @(_selectedRating == r ? "bg-gray-900 text-white shadow-md shadow-gray-900/20" : "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100")">
+                    @if (r == null) { <span>All Reviews</span> }
+                    else { 
+                        <div class="flex items-center gap-1.5">
+                            <span>@r</span>
+                            <i class="fa-solid fa-star text-yellow-400 text-xs pb-0.5"></i>
+                        </div>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Review List -->
+    @if (_loading)
+    {
+        <div class="space-y-4">
+            @for (int i = 0; i < 3; i++)
+            {
+                <div class="h-32 bg-white rounded-3xl animate-pulse border border-gray-100"></div>
+            }
+        </div>
+    }
+    else if (!_reviews.Any())
+    {
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center">
+            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-300">
+                <i class="fa-regular fa-comment-dots text-4xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">No Reviews Found</h3>
+            <p class="text-gray-500">
+                @if (_selectedRating.HasValue) { <span>No reviews match the selected rating filter.</span> }
+                else { <span>You haven't received any reviews yet. Keep up the good work!</span> }
+            </p>
+            @if (_selectedRating.HasValue)
+            {
+                <button @onclick="() => FilterByRating(null)" class="mt-6 px-6 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors">
+                    Clear Filters
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @foreach (var review in _reviews)
+            {
+                <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
+                    <div class="flex items-start justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center text-primary-700 font-bold shadow-inner">
+                                @(review.ClientName.FirstOrDefault().ToString().ToUpper())
+                            </div>
+                            <div>
+                                <p class="font-bold text-gray-900 leading-tight">@review.ClientName</p>
+                                <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">@review.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy")</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-0.5">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <i class="fa-solid fa-star text-sm @(i <= review.Rating ? "text-yellow-400 drop-shadow-sm" : "text-gray-100")"></i>
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1">
+                        @if (string.IsNullOrWhiteSpace(review.Comment))
+                        {
+                            <p class="text-gray-400 italic text-sm">No comment provided.</p>
+                        }
+                        else
+                        {
+                            <p class="text-gray-600 leading-relaxed">"@review.Comment"</p>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Pagination -->
+        @if (_totalPages > 1)
+        {
+            <div class="mt-10 flex justify-center">
+                <div class="inline-flex bg-white rounded-2xl shadow-sm border border-gray-100 p-1">
+                    <button class="px-4 py-2 text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors font-medium text-sm"
+                            disabled="@(_currentPage == 1)"
+                            @onclick="PrevPage">
+                        Prev
+                    </button>
+                    
+                    <div class="flex items-center px-4 font-bold text-sm text-gray-900">
+                        @_currentPage <span class="text-gray-400 mx-1 font-normal">of</span> @_totalPages
+                    </div>
+                    
+                    <button class="px-4 py-2 text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors font-medium text-sm"
+                            disabled="@(_currentPage == _totalPages)"
+                            @onclick="NextPage">
+                        Next
+                    </button>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .hide-scroll::-webkit-scrollbar { display: none; }
+    .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
+@code {
+    private List<Bookify.Client.Models.Common.ReviewModel> _allReviews = new();
+    private List<Bookify.Client.Models.Common.ReviewModel> _reviews = new();
+    private bool _loading = true;
+    
+    // Header Stats
+    private bool _statsLoaded = false;
+    private int _totalReviews = 0;
+    private double _averageRating = 0;
+
+    // Filters & Pagination
+    private int? _selectedRating = null;
+    private int _currentPage = 1;
+    private const int PageSize = 12; // Grid friendly
+    private int _totalPages = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        
+        // 1. Get Staff service
+        var staffId = await AuthService.GetUserIdAsync();
+        
+        if (staffId.HasValue)
+        {
+            var myServiceRes = await ServiceApi.GetByStaffIdAsync(staffId.Value);
+            if (myServiceRes.Success && myServiceRes.Data != null)
+            {
+                // 2. Load Reviews for this service
+                var reviewRes = await ReviewApi.GetServiceReviewsAsync(myServiceRes.Data.Id, 1, 1000); // load all for client-side filtering
+                
+                if (reviewRes.Success && reviewRes.Data != null)
+                {
+                    _allReviews = reviewRes.Data.Items.ToList();
+                    
+                    // Calc stats
+                    _totalReviews = _allReviews.Count;
+                    if (_totalReviews > 0)
+                        _averageRating = _allReviews.Average(r => r.Rating);
+                    
+                    _statsLoaded = true;
+                }
+            }
+        }
+
+        ApplyFiltersAndPagination();
+        _loading = false;
+    }
+
+    private void FilterByRating(int? rating)
+    {
+        _selectedRating = rating;
+        _currentPage = 1; // Reset to page 1 on filter change
+        ApplyFiltersAndPagination();
+    }
+
+    private void ApplyFiltersAndPagination()
+    {
+        // Filter
+        var filtered = _selectedRating.HasValue 
+            ? _allReviews.Where(r => r.Rating == _selectedRating.Value) 
+            : _allReviews;
+
+        // Sort (Newest first)
+        filtered = filtered.OrderByDescending(r => r.CreatedAt);
+
+        // Pagination metadata
+        var count = filtered.Count();
+        _totalPages = count > 0 ? (int)Math.Ceiling((double)count / PageSize) : 1;
+        
+        // Ensure current page is valid
+        if (_currentPage > _totalPages) _currentPage = _totalPages;
+        if (_currentPage < 1) _currentPage = 1;
+
+        // Paginate slice
+        _reviews = filtered.Skip((_currentPage - 1) * PageSize).Take(PageSize).ToList();
+    }
+
+    private void NextPage()
+    {
+        if (_currentPage < _totalPages)
+        {
+            _currentPage++;
+            ApplyFiltersAndPagination();
+        }
+    }
+
+    private void PrevPage()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+            ApplyFiltersAndPagination();
+        }
+    }
+}

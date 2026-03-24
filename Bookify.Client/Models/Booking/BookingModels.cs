@@ -14,7 +14,9 @@ public class BookingModel
     public string   Status          { get; set; } = string.Empty;
     public decimal  Price           { get; set; }
     public int      DurationMinutes { get; set; }
+    public string?  CategoryName    { get; set; }   // Added: matches BookingResponse.CategoryName
 }
+
 
 public class CreateBookingRequest
 {

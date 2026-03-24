@@ -1,4 +1,4 @@
-﻿using Bookify.Application.DTO.Category;
+using Bookify.Application.DTO.Category;
 using Bookify.Application.Interfaces.Category;
 using Bookify.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -30,7 +30,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _categoryService.GetAsync(id);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Get all active categories.</summary>
@@ -41,7 +41,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> GetAll()
         {
             var result = await _categoryService.GetAllAsync();
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Create a new category (Admin only).</summary>
@@ -56,10 +56,14 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> Create([FromBody] CreateCategoryRequest request)
         {
             var result = await _categoryService.CreateAsync(request);
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = result.Data },
-                result);
+            if (result.Success)
+            {
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = result.Data },
+                    result);
+            }
+            return HandleResult(result);
         }
 
         /// <summary>Update an existing category (Admin only).</summary>
@@ -75,7 +79,7 @@ namespace Bookify.API.Controllers
         {
             request.Id = id;
             var result = await _categoryService.UpdateAsync(request);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Deactivate a category (Admin only).</summary>
@@ -90,7 +94,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> Deactivate(Guid id)
         {
             var result = await _categoryService.DeactivateAsync(id);
-            return Ok(result);
+            return HandleResult(result);
         }
     }
 }

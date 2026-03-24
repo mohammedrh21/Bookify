@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Entities;
+using Bookify.Domain.Entities;
 using Bookify.Infrastructure.Identity.Entity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -24,6 +24,10 @@ namespace Bookify.Infrastructure.Data
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<SupportTicket> SupportTickets { get; set; }
         public DbSet<FAQ> FAQs { get; set; }
+        public DbSet<ContactInfo> ContactInfo { get; set; }
+        public DbSet<Review> Reviews { get; set; }
+        public DbSet<ServiceApprovalRequest> ServiceApprovalRequests { get; set; }
+        public DbSet<Payment> Payments { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -74,6 +78,72 @@ namespace Bookify.Infrastructure.Data
                 .WithMany(c => c.Services)
                 .HasForeignKey(s => s.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ================================
+            // Review Configurations
+            // ================================
+            builder.Entity<Review>(entity =>
+            {
+                entity.HasOne(r => r.Service)
+                    .WithMany(s => s.Reviews)
+                    .HasForeignKey(r => r.ServiceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.Client)
+                    .WithMany()
+                    .HasForeignKey(r => r.ClientId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.Booking)
+                    .WithMany()
+                    .HasForeignKey(r => r.BookingId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ================================
+            // ServiceApprovalRequest Configurations
+            // ================================
+            builder.Entity<ServiceApprovalRequest>(entity =>
+            {
+                entity.HasOne(r => r.Staff)
+                    .WithMany()
+                    .HasForeignKey(r => r.StaffId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.Service)
+                    .WithMany()
+                    .HasForeignKey(r => r.ServiceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.Actioner)
+                    .WithMany()
+                    .HasForeignKey(r => r.ActionedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ================================
+            // Payment Configurations
+            // ================================
+            builder.Entity<Payment>(entity =>
+            {
+                entity.Property(p => p.Amount)
+                      .HasPrecision(18, 2);
+
+                entity.HasOne(p => p.Client)
+                    .WithMany()
+                    .HasForeignKey(p => p.ClientId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(p => p.Service)
+                    .WithMany()
+                    .HasForeignKey(p => p.ServiceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(p => p.Booking)
+                    .WithMany()
+                    .HasForeignKey(p => p.BookingId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
         }
     }
 }

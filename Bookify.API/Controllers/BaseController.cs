@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Common;
+using Bookify.Application.Common;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -14,24 +14,17 @@ namespace Bookify.API.Controllers
         /// <summary>
         /// Gets the current user's ID from claims
         /// </summary>
-        protected string CurrentUserId =>
-            User.FindFirstValue(ClaimTypes.NameIdentifier) ??
-            User.FindFirstValue(JwtRegisteredClaimNames.Sub) ??
-            string.Empty;
+        protected string CurrentUserId => GetClaimValue(ClaimTypes.NameIdentifier, JwtRegisteredClaimNames.Sub);
 
         /// <summary>
         /// Gets the current user's role from claims
         /// </summary>
-        protected string CurrentUserRole =>
-            User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+        protected string CurrentUserRole => GetClaimValue(ClaimTypes.Role);
 
         /// <summary>
         /// Gets the current user's email from claims
         /// </summary>
-        protected string CurrentUserEmail =>
-            User.FindFirstValue(ClaimTypes.Email) ??
-            User.FindFirstValue(JwtRegisteredClaimNames.Email) ??
-            string.Empty;
+        protected string CurrentUserEmail => GetClaimValue(ClaimTypes.Email, JwtRegisteredClaimNames.Email);
 
         /// <summary>
         /// Checks if the current user is an admin
@@ -68,6 +61,34 @@ namespace Bookify.API.Controllers
 
         public BaseController()
         {
+        }
+
+        /// <summary>
+        /// Reads the first available claim value from a priority list of claim types.
+        /// </summary>
+        protected string GetClaimValue(params string[] claimTypes)
+        {
+            foreach (var type in claimTypes)
+            {
+                var value = User.FindFirstValue(type);
+                if (!string.IsNullOrEmpty(value))
+                    return value;
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Maps a ServiceResponse to an appropriate ActionResult.
+        /// </summary>
+        protected ActionResult HandleResult<T>(ServiceResponse<T> result, bool unwrapData = false)
+        {
+            if (result == null) 
+                return NotFound();
+
+            if (result.Success)
+                return unwrapData && result.Data != null ? Ok(result.Data) : Ok(result);
+
+            return BadRequest(unwrapData ? new { error = result.Message } : result);
         }
     }
 }

@@ -1,0 +1,42 @@
+@page "/payment-success"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Payment Successful</PageTitle>
+
+<div class="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center mt-20">
+        @if (_isProcessing)
+        {
+            <div class="flex justify-center mb-6">
+                <!-- Simple Tailwind Spinner -->
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+            <h2 class="text-2xl font-semibold text-gray-900 mb-2">Confirming your booking...</h2>
+            <p class="text-gray-500">Please wait while we verify your secure payment session.</p>
+        }
+        else if (_isSuccess)
+        {
+            <div class="flex justify-center mb-6">
+                <svg class="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Payment Successful! 🎉</h2>
+            <p class="text-gray-600 mb-8">Your booking has been officially confirmed and locked in.</p>
+            <a href="/my-bookings" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-xl shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition">
+                View My Bookings
+            </a>
+        }
+        else
+        {
+            <div class="flex justify-center mb-6">
+                <svg class="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-semibold text-red-600 mb-4">Verification Failed</h2>
+            <p class="text-gray-600 mb-8">We could not definitively verify your session or it may have expired. Please contact support.</p>
+            <a href="/" class="text-indigo-600 font-medium hover:text-indigo-500 transition">Return to Home</a>
+        }
+    </div>
+</div>

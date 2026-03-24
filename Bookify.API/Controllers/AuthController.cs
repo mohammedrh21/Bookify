@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Common;
+using Bookify.Application.Common;
 using Bookify.Application.DTO.Auth;
 using Bookify.Application.DTO.Identity;
 using Bookify.Application.Interfaces.Auth;
@@ -29,7 +29,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> Login(LoginRequest request)
         {
             var result = await _authService.LoginAsync(request);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Refresh the access token using a refresh token.</summary>
@@ -42,7 +42,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> RefreshToken(RefreshTokenRequest request)
         {
             var result = await _authService.RefreshTokenAsync(request);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Revoke all refresh tokens for the current user (logout from all devices).</summary>
@@ -52,7 +52,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> RevokeTokens()
         {
             var result = await _authService.RevokeTokenAsync(CurrentUserId);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Register a new client account.</summary>
@@ -67,7 +67,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> RegisterClient(RegisterClientRequest request)
         {
             var result = await _authService.RegisterClientAsync(request);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Register a new staff account.</summary>
@@ -82,7 +82,7 @@ namespace Bookify.API.Controllers
         public async Task<IActionResult> RegisterStaff(RegisterStaffRequest request)
         {
             var result = await _authService.RegisterStaffAsync(request);
-            return Ok(result);
+            return HandleResult(result);
         }
 
         /// <summary>Get current authenticated user information.</summary>
@@ -98,6 +98,35 @@ namespace Bookify.API.Controllers
                 role = CurrentUserRole,
                 isAuthenticated = IsAuthenticated
             });
+        }
+        /// <summary>Send OTP to Email for password reset.</summary>
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ServiceResponse<bool>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+        {
+            var result = await _authService.ForgotPasswordAsync(request);
+            return HandleResult(result);
+        }
+
+        /// <summary>Verify OTP for password reset.</summary>
+        [HttpPost("verify-otp")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ServiceResponse<string>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> VerifyOtp(VerifyOtpRequest request)
+        {
+            var result = await _authService.VerifyOtpAsync(request);
+            return HandleResult(result);
+        }
+
+        /// <summary>Reset password using token.</summary>
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ServiceResponse<bool>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
+        {
+            var result = await _authService.ResetPasswordAsync(request);
+            return HandleResult(result);
         }
     }
 }

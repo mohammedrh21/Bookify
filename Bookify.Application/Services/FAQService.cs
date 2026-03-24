@@ -1,6 +1,7 @@
 using AutoMapper;
 using Bookify.Application.Common;
 using Bookify.Application.DTO.FAQ;
+using Bookify.Application.DTO.Common;
 using Bookify.Application.Interfaces;
 using Bookify.Application.Interfaces.FAQ;
 using Bookify.Domain.Contracts.FAQ;
@@ -25,19 +26,26 @@ namespace Bookify.Application.Services
             _logger = logger;
         }
 
-        public async Task<ServiceResponse<IEnumerable<FAQResponse>>> GetAllAsync()
+        public async Task<ServiceResponse<PagedResult<FAQResponse>>> GetAllAsync(PaginationParams paginationParams)
         {
-            _logger.LogInformation("Fetching all FAQs");
-            var faqs = await _repo.GetAllAsync();
-            return ServiceResponse<IEnumerable<FAQResponse>>.Ok(
-                data: _mapper.Map<IEnumerable<FAQResponse>>(faqs));
+            _logger.LogInformation($"Fetching paginated FAQs: Page {paginationParams.PageNumber}, Size {paginationParams.PageSize}, Search: {paginationParams.Search}");
+            var (faqs, totalCount) = await _repo.GetPaginatedAsync(paginationParams.PageNumber, paginationParams.PageSize, paginationParams.Search);
+            
+            var pagedResult = new PagedResult<FAQResponse>
+            {
+                Items = _mapper.Map<IEnumerable<FAQResponse>>(faqs),
+                TotalCount = totalCount,
+                PageNumber = paginationParams.PageNumber,
+                PageSize = paginationParams.PageSize
+            };
+
+            return ServiceResponse<PagedResult<FAQResponse>>.Ok(data: pagedResult);
         }
 
         public async Task<ServiceResponse<FAQResponse>> GetByIdAsync(Guid id)
         {
             _logger.LogInformation($"Fetching FAQ with ID {id}");
-            var faqs = await _repo.GetAllAsync(); // For simplicity, though GetByIdAsync on repo is better
-            var faq = faqs.SingleOrDefault(x => x.Id == id)
+            var faq = await _repo.GetByIdAsync(id)
                 ?? throw new NotFoundException(nameof(FAQ), id);
 
             return ServiceResponse<FAQResponse>.Ok(

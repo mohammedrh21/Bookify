@@ -16,4 +16,10 @@ public class ServiceModel
     public string StaffName { get; set; } = string.Empty;
     public Guid StaffId { get; set; }
     public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
+    public bool IsActive { get; set; }
+    public double Rating { get; set; }
+    public int ReviewCount { get; set; }
+    public string? ImagePath { get; set; }
+    public string? StaffImagePath { get; set; }
 }

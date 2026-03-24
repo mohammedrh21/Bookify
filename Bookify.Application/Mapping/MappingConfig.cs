@@ -1,7 +1,9 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Bookify.Application.DTO.Booking;
 using Bookify.Application.DTO.Category;
+using Bookify.Application.DTO.ContactInfo;
 using Bookify.Application.DTO.Identity;
+using Bookify.Application.DTO.Review;
 using Bookify.Application.DTO.Service;
 using Bookify.Domain.Entities;
 using Bookify.Domain.Enums;
@@ -17,7 +19,9 @@ namespace Bookify.Application.Mapping
                 .ForMember(d => d.CategoryName,
                            o => o.MapFrom(s => s.Category != null ? s.Category.Name : string.Empty))
                 .ForMember(d => d.StaffName,
-                           o => o.MapFrom(s => s.Staff != null ? s.Staff.FullName : string.Empty));
+                           o => o.MapFrom(s => s.Staff != null ? s.Staff.FullName : string.Empty))
+                .ForMember(d => d.StaffImagePath,
+                           o => o.MapFrom(s => s.Staff != null ? s.Staff.ImagePath : null));
 
             CreateMap<CreateServiceRequest, Service>();
             CreateMap<UpdateServiceRequest, Service>();
@@ -56,7 +60,11 @@ namespace Bookify.Application.Mapping
                 .ForMember(d => d.Price,
                            o => o.MapFrom(s => s.Service != null ? s.Service.Price : 0m))
                 .ForMember(d => d.DurationMinutes,
-                           o => o.MapFrom(s => s.Service != null ? s.Service.Duration : 0));
+                           o => o.MapFrom(s => s.Service != null ? s.Service.Duration : 0))
+                .ForMember(d => d.CategoryName,
+                           o => o.MapFrom(s => s.Service != null && s.Service.Category != null 
+                               ? s.Service.Category.Name 
+                               : string.Empty));
 
             // ── FAQ ────────────────────────────────────────────────
             CreateMap<Bookify.Application.DTO.FAQ.CreateFAQRequest, FAQ>();
@@ -66,6 +74,16 @@ namespace Bookify.Application.Mapping
             // ── Support Ticket ─────────────────────────────────────
             CreateMap<Bookify.Application.DTO.SupportTicket.CreateTicketRequest, SupportTicket>();
             CreateMap<SupportTicket, Bookify.Application.DTO.SupportTicket.TicketResponse>();
+
+            // ── Support ContactInfo ─────────────────────────────────────
+            CreateMap<ContactInfo, Bookify.Application.DTO.ContactInfo.ContactInfoResponse>();
+            CreateMap<ContactInfo, Bookify.Application.DTO.ContactInfo.ContactInfoResponse>();
+            CreateMap<Bookify.Application.DTO.ContactInfo.UpdateContactInfoRequest, Bookify.Application.DTO.ContactInfo.CreateContactInfoRequest>();
+
+            // ── Review ─────────────────────────────────────────────
+            CreateMap<Review, ReviewDto>()
+                .ForMember(d => d.ServiceName, o => o.MapFrom(s => s.Service != null ? s.Service.Name : string.Empty))
+                .ForMember(d => d.ClientName, o => o.MapFrom(s => s.Client != null ? s.Client.FullName : string.Empty));
         }
     }
 }

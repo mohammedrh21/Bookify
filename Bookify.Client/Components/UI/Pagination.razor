@@ -1,0 +1,69 @@
+@if (TotalPages > 1)
+{
+    <div class="flex items-center justify-between px-4 py-4 border-t border-gray-100">
+        <p class="text-sm text-gray-600">
+            Showing page <span class="font-medium">@CurrentPage</span> of <span class="font-medium">@TotalPages</span>
+            &ndash; @TotalCount total records
+        </p>
+        <div class="flex items-center gap-1">
+            <button @onclick="() => OnPageChanged.InvokeAsync(CurrentPage - 1)"
+                    disabled="@(!HasPreviousPage)"
+                    class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                <i class="fa-solid fa-chevron-left text-xs mr-1"></i> Prev
+            </button>
+
+            @foreach (var p in GetPageNumbers())
+            {
+                if (p == -1)
+                {
+                    <span class="px-2 py-1.5 text-gray-400">…</span>
+                }
+                else
+                {
+                    <button @onclick="() => OnPageChanged.InvokeAsync(p)"
+                            class="@($"px-3 py-1.5 text-sm rounded-lg border transition-colors {(p == CurrentPage ? "bg-blue-600 text-white border-blue-600" : "border-gray-200 hover:bg-gray-50")}")">
+                        @p
+                    </button>
+                }
+            }
+
+            <button @onclick="() => OnPageChanged.InvokeAsync(CurrentPage + 1)"
+                    disabled="@(!HasNextPage)"
+                    class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                Next <i class="fa-solid fa-chevron-right text-xs ml-1"></i>
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; }
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+
+    private bool HasPreviousPage => CurrentPage > 1;
+    private bool HasNextPage => CurrentPage < TotalPages;
+
+    private List<int> GetPageNumbers()
+    {
+        var pages = new List<int>();
+        if (TotalPages <= 7)
+        {
+            for (int i = 1; i <= TotalPages; i++) pages.Add(i);
+        }
+        else
+        {
+            pages.Add(1);
+            if (CurrentPage > 3) pages.Add(-1); // ellipsis
+
+            int start = Math.Max(2, CurrentPage - 1);
+            int end = Math.Min(TotalPages - 1, CurrentPage + 1);
+            for (int i = start; i <= end; i++) pages.Add(i);
+
+            if (CurrentPage < TotalPages - 2) pages.Add(-1); // ellipsis
+            pages.Add(TotalPages);
+        }
+        return pages;
+    }
+}

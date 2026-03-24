@@ -36,3 +36,22 @@ public class LoginResponseModel
     public string   FullName     { get; set; } = string.Empty;
     public string   Email        { get; set; } = string.Empty;
 }
+
+public class ForgotPasswordRequestModel
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+public class VerifyOtpRequestModel
+{
+    public string Email { get; set; } = string.Empty;
+    public string Otp { get; set; } = string.Empty;
+}
+
+public class ResetPasswordRequestModel
+{
+    public string Email { get; set; } = string.Empty;
+    public string ResetToken { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+    public string ConfirmPassword { get; set; } = string.Empty;
+}

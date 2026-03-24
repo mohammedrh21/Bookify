@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Interfaces.Staff;
+using Bookify.Application.Interfaces.Staff;
 using Bookify.Domain.Entities;
 using Bookify.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +21,33 @@ namespace Bookify.Infrastructure.Repositories
         {
             _db.Staffs.Add(staff);
             await _db.SaveChangesAsync();
+        }
+
+        public async Task<Staff?> GetByIdAsync(Guid id)
+        {
+            return await _db.Staffs.FindAsync(id);
+        }
+
+        public async Task UpdateAsync(Staff staff)
+        {
+            _db.Staffs.Update(staff);
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task<(IEnumerable<Staff> Items, int TotalCount)> GetStaffPaginatedAsync(int page, int pageSize)
+        {
+            var query = _db.Staffs
+                .Include(s => s.Service)
+                .AsNoTracking();
+
+            var total = await query.CountAsync();
+            var items = await query
+                .OrderBy(s => s.FullName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, total);
         }
 
     }

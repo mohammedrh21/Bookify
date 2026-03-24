@@ -21,5 +21,6 @@ namespace Bookify.Domain.Entities
 
         /// <summary>Set to DateTime.UtcNow at creation; used to enforce the 1-ticket-per-email-per-day rule.</summary>
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsRead { get; set; } = false;
     }
 }

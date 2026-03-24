@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Bookify.Domain.Entities
 {
@@ -27,6 +27,12 @@ namespace Bookify.Domain.Entities
         [Required]
         public decimal Price { get; set; }
         public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
+        public bool IsActive { get; set; } = false;
+
+        public double Rating { get; set; } = 0;
+        public int ReviewCount { get; set; } = 0;
+        public string? ImagePath { get; set; }
 
         // One-to-One: Each service is handled by one staff
         public Guid StaffId { get; set; }
@@ -38,6 +44,9 @@ namespace Bookify.Domain.Entities
 
         // One-to-Many: A service can have multiple bookings
         public ICollection<Booking>? Bookings { get; set; }
+
+        // One-to-Many: A service can have multiple reviews
+        public ICollection<Review> Reviews { get; set; } = [];
     }
 }
 

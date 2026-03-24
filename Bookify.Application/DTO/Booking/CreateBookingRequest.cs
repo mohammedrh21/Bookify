@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Enums;
+using Bookify.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace Bookify.Application.DTO.Booking

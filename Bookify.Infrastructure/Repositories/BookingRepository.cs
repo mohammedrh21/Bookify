@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Contracts.Booking;
+using Bookify.Domain.Contracts.Booking;
 using Bookify.Domain.Entities;
 using Bookify.Domain.Enums;
 using Bookify.Infrastructure.Data;
@@ -33,7 +33,7 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(b => b.Client)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
-        public async Task<IEnumerable<Booking>> GetByClientIdAsync(Guid clientId)
+        public async Task<IEnumerable<Booking>> GetByClientIdAsync(Guid clientId, int skip = 0, int take = 10)
             => await _db.Bookings
                 .Include(b => b.Service)
                     .ThenInclude(s => s.Staff)
@@ -41,10 +41,13 @@ namespace Bookify.Infrastructure.Repositories
                     .ThenInclude(s => s.Category)
                 .Include(b => b.Client)
                 .Where(b => b.ClientId == clientId)
+                .OrderByDescending(b => b.Date)
+                .Skip(skip)
+                .Take(take)
                 .AsNoTracking()
                 .ToListAsync();
 
-        public async Task<IEnumerable<Booking>> GetByStaffIdAsync(Guid staffId)
+        public async Task<IEnumerable<Booking>> GetByStaffIdAsync(Guid staffId, int skip = 0, int take = 10)
             => await _db.Bookings
                 .Include(b => b.Service)
                     .ThenInclude(s => s.Staff)
@@ -52,13 +55,74 @@ namespace Bookify.Infrastructure.Repositories
                     .ThenInclude(s => s.Category)
                 .Include(b => b.Client)
                 .Where(b => b.Service.StaffId == staffId)
+                .OrderByDescending(b => b.Date)
+                .Skip(skip)
+                .Take(take)
+                .AsNoTracking()
+                .ToListAsync();
+
+        public async Task<IEnumerable<Booking>> GetByStaffIdFilteredAsync(
+            Guid staffId,
+            BookingStatus? status = null,
+            DateTime? from = null,
+            DateTime? to = null,
+            string? search = null,
+            bool sortAscending = true,
+            int skip = 0,
+            int take = 10)
+        {
+            var query = _db.Bookings
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Staff)
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Category)
+                .Include(b => b.Client)
+                .Where(b => b.Service.StaffId == staffId);
+
+            if (status.HasValue)
+                query = query.Where(b => b.Status == status);
+
+            if (from.HasValue)
+            {
+                var fromDate = from.Value.Date;
+                query = query.Where(b => b.Date >= fromDate);
+            }
+
+            if (to.HasValue)
+            {
+                var toDate = to.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(b => b.Date <= toDate);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(b => b.Client.FullName.Contains(search));
+
+            query = sortAscending
+                ? query.OrderBy(b => b.Date).ThenBy(b => b.Time)
+                : query.OrderByDescending(b => b.Date).ThenByDescending(b => b.Time);
+
+            return await query
+                .Skip(skip)
+                .Take(take)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Booking>> GetByServiceIdAsync(Guid serviceId, DateTime from, DateTime to)
+            => await _db.Bookings
+                .Where(b => b.ServiceId == serviceId && b.Date >= from && b.Date <= to && b.Status != BookingStatus.Cancelled)
                 .AsNoTracking()
                 .ToListAsync();
 
         public async Task<IEnumerable<Booking>> GetAllAsync(
             DateTime? from,
             DateTime? to,
-            BookingStatus? status)
+            BookingStatus? status,
+            string? search = null,
+            string? staffNameFilter = null,
+            Guid? categoryIdFilter = null,
+            int skip = 0,
+            int take = 10)
         {
             var query = _db.Bookings
                 .Include(b => b.Service)
@@ -69,15 +133,92 @@ namespace Bookify.Infrastructure.Repositories
                 .AsQueryable();
 
             if (from.HasValue)
-                query = query.Where(b => b.Date >= from);
+            {
+                var fromDate = from.Value.Date;
+                query = query.Where(b => b.Date >= fromDate);
+            }
 
             if (to.HasValue)
-                query = query.Where(b => b.Date <= to);
+            {
+                var toDate = to.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(b => b.Date <= toDate);
+            }
 
             if (status.HasValue)
                 query = query.Where(b => b.Status == status);
 
-            return await query.AsNoTracking().ToListAsync();
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(b =>
+                    b.Service.Name.Contains(search) ||
+                    b.Client.FullName.Contains(search) ||
+                    b.Service.Staff.FullName.Contains(search));
+
+            if (!string.IsNullOrWhiteSpace(staffNameFilter))
+                query = query.Where(b => b.Service.Staff.FullName.Contains(staffNameFilter));
+
+            if (categoryIdFilter.HasValue)
+                query = query.Where(b => b.Service.CategoryId == categoryIdFilter.Value);
+
+            return await query
+                .OrderByDescending(b => b.Date)
+                .Skip(skip)
+                .Take(take)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<int> GetCountAsync(
+            DateTime? from = null,
+            DateTime? to = null,
+            BookingStatus? status = null,
+            string? search = null,
+            string? staffNameFilter = null,
+            Guid? categoryIdFilter = null,
+            Guid? clientId = null,
+            Guid? staffId = null)
+        {
+            var query = _db.Bookings
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Staff)
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Category)
+                .Include(b => b.Client)
+                .AsQueryable();
+
+            if (from.HasValue)
+            {
+                var fromDate = from.Value.Date;
+                query = query.Where(b => b.Date >= fromDate);
+            }
+
+            if (to.HasValue)
+            {
+                var toDate = to.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(b => b.Date <= toDate);
+            }
+
+            if (status.HasValue)
+                query = query.Where(b => b.Status == status);
+
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(b =>
+                    b.Service.Name.Contains(search) ||
+                    b.Client.FullName.Contains(search) ||
+                    b.Service.Staff.FullName.Contains(search));
+
+            if (!string.IsNullOrWhiteSpace(staffNameFilter))
+                query = query.Where(b => b.Service.Staff.FullName.Contains(staffNameFilter));
+
+            if (categoryIdFilter.HasValue)
+                query = query.Where(b => b.Service.CategoryId == categoryIdFilter.Value);
+
+            if (clientId.HasValue)
+                query = query.Where(b => b.ClientId == clientId.Value);
+
+            if (staffId.HasValue)
+                query = query.Where(b => b.Service.StaffId == staffId.Value);
+
+            return await query.CountAsync();
         }
 
         public async Task<bool> ExistsAsync(
@@ -88,6 +229,24 @@ namespace Bookify.Infrastructure.Repositories
                 b.Service.StaffId == staffId &&
                 b.Date == date &&
                 b.Time == time);
+
+        public async Task<int> GetCountByStatusAsync(BookingStatus status, Guid? staffId = null)
+        {
+            var query = _db.Bookings.Where(b => b.Status == status);
+            if (staffId.HasValue)
+                query = query.Where(b => b.Service.StaffId == staffId.Value);
+
+            return await query.CountAsync();
+        }
+
+        public async Task<double> GetTotalRevenueAsync(Guid? staffId = null)
+        {
+            var query = _db.Bookings.Where(b => b.Status == BookingStatus.Completed);
+            if (staffId.HasValue)
+                query = query.Where(b => b.Service.StaffId == staffId.Value);
+
+            return await query.Include(b => b.Service).SumAsync(b => (double)b.Service.Price);
+        }
 
         public async Task SaveChangesAsync()
             => await _db.SaveChangesAsync();

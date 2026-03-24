@@ -1,21 +1,26 @@
-﻿using AutoMapper.Features;
+using AutoMapper.Features;
 using Bookify.Application.Common;
 using Bookify.Application.Interfaces;
 using Bookify.Application.Interfaces.Auth;
+using Bookify.Application.Interfaces.Users;
 using Bookify.Application.Interfaces.Category;
 using Bookify.Application.Interfaces.Client;
+using Bookify.Application.Interfaces.ContactInfo;
 using Bookify.Application.Interfaces.FAQ;
 using Bookify.Application.Interfaces.Service;
 using Bookify.Application.Interfaces.Staff;
 using Bookify.Application.Interfaces.Ticket;
 using Bookify.Application.Mapping;
 using Bookify.Application.Services;
+using Bookify.Application.Services.Users;
 using Bookify.Application.Validators;
 using Bookify.Domain.Contracts;
 using Bookify.Domain.Contracts.Booking;
 using Bookify.Domain.Contracts.Category;
+using Bookify.Domain.Contracts.ContactInfo;
 using Bookify.Domain.Contracts.FAQ;
 using Bookify.Domain.Contracts.RefreshToken;
+using Bookify.Domain.Contracts.Review;
 using Bookify.Domain.Contracts.Service;
 using Bookify.Domain.Contracts.SupportTicket;
 using Bookify.Domain.Entities;
@@ -24,6 +29,7 @@ using Bookify.Infrastructure.Identity;
 using Bookify.Infrastructure.Identity.Entity;
 using Bookify.Infrastructure.Repositories;
 using Bookify.Infrastructure.Service;
+using Bookify.Infrastructure.Services;
 using Bookify.Infrastructure.Services.Auth;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -36,6 +42,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Bookify.Infrastructure.Services.Files;
+using Bookify.Application.Interfaces.Email;
+using Bookify.Infrastructure.Services.Email;
+using Bookify.Application.Interfaces.Payment;
+using Bookify.Infrastructure.Services.Payment;
+
 
 namespace Bookify.Infrastructure;
 
@@ -55,6 +67,7 @@ public static class DependencyInjection
 
         services.AddHttpContextAccessor();
         services.AddScoped<IIdentitySeeder, IdentitySeeder>();
+        services.AddScoped<IDatabaseSeeder, DatabaseSeeder>();
 
         return services;
     }
@@ -187,6 +200,7 @@ public static class DependencyInjection
     private static void AddRepositories(IServiceCollection services)
     {
         services.AddScoped<IServiceRepository, ServiceRepository>();
+        services.AddScoped<IServiceApprovalRepository, ServiceApprovalRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IClientRepository, ClientRepository>();
         services.AddScoped<IStaffRepository, StaffRepository>();
@@ -194,6 +208,8 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>(); // FIXED: Added
         services.AddScoped<IFAQRepository, FAQRepository>();
         services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<IContactInfoRepository, ContactInfoRepository>();
+        services.AddScoped<IReviewRepository, ReviewRepository>();
     }
 
     // ============================
@@ -201,29 +217,20 @@ public static class DependencyInjection
     // ============================
     private static void AddApplicationServices(IServiceCollection services, IConfiguration configuration)
     {
-
-        services.AddAutoMapper(cfg =>
-        {
-            if (!string.IsNullOrEmpty(configuration["AutoMapper:LicenseKey"]))
-            {
-                cfg.LicenseKey = configuration["AutoMapper:LicenseKey"];
-            }
-            cfg.AddProfile<MappingConfig>();
-
-        }, AppDomain.CurrentDomain.GetAssemblies());
-
-
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IIdentityUserService, IdentityUserService>();
         services.AddScoped(typeof(IAppLogger<>), typeof(LoggerAdapter<>));
-        services.AddScoped<IBookingService, BookingService>();
-        services.AddScoped<IServiceService, ServiceService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-        services.AddScoped<ICategoryService, CategoryService>();
-        services.AddScoped<IFAQService, FAQService>();
-        services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<IGenericRepository<Client>, GenericRepository<Client>>();
         services.AddScoped<IGenericRepository<Admin>, GenericRepository<Admin>>();
-
+        services.AddScoped<IEmailSender, EmailSender>();
+        
+        services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
+        services.AddScoped<IFileService, FileService>();
+        
+        services.Configure<StripeSettings>(configuration.GetSection("StripeSettings"));
+        services.AddScoped<IPaymentService, StripePaymentService>();
     }
 
     // ============================
@@ -233,7 +240,6 @@ public static class DependencyInjection
     {
         services.AddFluentValidationAutoValidation();
         services.AddFluentValidationClientsideAdapters();
-        services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
     }
 }
 

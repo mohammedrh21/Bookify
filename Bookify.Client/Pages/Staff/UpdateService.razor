@@ -1,9 +1,7 @@
-﻿@page "/services/edit-service/{Id:guid}"
+@page "/services/edit-service/{Id:guid}"
 @attribute [Authorize(Roles = "Staff")]
 
-@inject IServiceApiService ServiceService
-@inject ICategoryService CategoryService
-@inject NavigationManager Nav
+
 
 <PageTitle>Edit Service — Bookify</PageTitle>
 
@@ -52,31 +50,4 @@
     }
 </div>
 
-@code {
-    [Parameter] public Guid Id { get; set; }
-
-    private ServiceModel? _model = new();
-    private ServiceModel _modelUpdate = new();
-
-    private List<CategoryModel> _categories = new();
-    private bool _loading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var svcResult  = await ServiceService.GetByIdAsync(Id);
-        _model         = svcResult.Data;
-        var catResult  = await CategoryService.GetAllAsync();
-        _categories    = catResult.Data ?? [];
-        _loading = false;
-    }
-
-    private async Task HandleSubmit()
-    {
-        if (_model != null)
-            _modelUpdate = _model;
-
-        var result = await ServiceService.UpdateAsync(_modelUpdate);
-        if (result.Success)
-            Nav.NavigateTo("/services/my-service");
-    }
-}
+

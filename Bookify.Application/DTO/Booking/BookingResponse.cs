@@ -16,5 +16,6 @@
         public string ClientName { get; set; } = default!;
         public decimal Price { get; set; }
         public int DurationMinutes { get; set; }
+        public string? CategoryName { get; set; }
     }
 }

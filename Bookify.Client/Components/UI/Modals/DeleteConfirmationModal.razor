@@ -1,0 +1,47 @@
+<div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-in fade-in duration-200">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 transform animate-in zoom-in duration-200">
+
+        <h3 class="text-xl font-bold text-center text-gray-900 mb-4">
+            @Title
+        </h3>
+
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <p class="text-sm text-gray-500 text-center mb-4 leading-relaxed">
+                @Message
+            </p>
+        }
+
+        @if (Countdown > 0)
+        {
+            <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 text-center">
+                <p class="text-red-600 font-semibold text-sm">
+                    Please wait <span class="font-bold">@Countdown</span> seconds to confirm...
+                </p>
+            </div>
+        }
+
+        <div class="flex justify-center gap-4 mt-6">
+            <button @onclick="() => OnCancel.InvokeAsync()"
+                    class="px-5 py-2.5 border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition">
+                Cancel
+            </button>
+
+            <button @onclick="() => OnConfirm.InvokeAsync()"
+                    disabled="@(Countdown > 0)"
+                    class="px-6 py-2.5 rounded-xl text-white font-semibold shadow-lg transition-all 
+                           @(Countdown > 0 ? "bg-red-300 cursor-not-allowed shadow-none" : "bg-red-600 hover:bg-red-700 shadow-red-500/20")">
+                Confirm Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Are you sure?";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public int Countdown { get; set; } = 0;
+
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}

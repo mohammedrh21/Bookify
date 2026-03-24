@@ -1,6 +1,6 @@
 @page "/admin/categories"
 @attribute [Authorize(Roles = "Admin")]
-@inject ICategoryService CategoryService
+
 
 <PageTitle>Categories — Bookify Admin</PageTitle>
 
@@ -81,46 +81,5 @@
     }
 </div>
 
-@code {
-    private List<CategoryModel> _categories      = [];
-    private string              _newCategoryName  = string.Empty;
-    private bool                _loading          = true;
-    private bool                _showForm         = false;
-    private bool                _saving           = false;
 
-    protected override async Task OnInitializedAsync()
-    {
-        var result = await CategoryService.GetAllAsync();
-        _categories = result.Data ?? [];
-        _loading    = false;
-    }
 
-    private async Task CreateCategory()
-    {
-        if (string.IsNullOrWhiteSpace(_newCategoryName)) return;
-
-        _saving = true;
-        StateHasChanged();
-
-        var result = await CategoryService.CreateAsync(new CategoryModel { Name = _newCategoryName.Trim() });
-        if (result.Success)
-        {
-            var refresh = await CategoryService.GetAllAsync();
-            _categories      = refresh.Data ?? [];
-            _newCategoryName = string.Empty;
-            _showForm        = false;
-        }
-
-        _saving = false;
-    }
-
-    private async Task DeactivateCategory(Guid id)
-    {
-        var result = await CategoryService.DeactivateAsync(id);
-        if (result.Success)
-        {
-            var refresh = await CategoryService.GetAllAsync();
-            _categories = refresh.Data ?? [];
-        }
-    }
-}

@@ -1,16 +1,83 @@
-﻿@page "/booking/service-bookings"
+@page "/booking/service-bookings"
 @attribute [Authorize(Roles = "Staff")]
-@inject IBookingService BookingService
-@inject IAuthService AuthService
-@inject NavigationManager Nav
 
-<PageTitle>Booking History — Bookify Staff</PageTitle>
+<PageTitle>Service Bookings — Bookify Staff</PageTitle>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <div class="flex items-center justify-between mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Service Bookings</h1>
     </div>
 
+    @* ── Filter Panel ──────────────────────────────────────────── *@
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6 space-y-4">
+
+        @* Row 1: Search + Status + Date Preset *@
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input value="@_search" @oninput="OnSearchChanged"
+                       placeholder="Search by client name..."
+                       class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+            </div>
+
+            <select @bind="_statusFilter" @bind:after="ApplyFilters"
+                    class="px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-300 min-w-[155px]">
+                <option value="">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+
+            <select @bind="_datePreset" @bind:after="OnDatePresetChanged"
+                    class="px-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-300 min-w-[155px]">
+                <option value="">All Dates</option>
+                <option value="Today">Today</option>
+                <option value="ThisWeek">This Week</option>
+                <option value="ThisMonth">This Month</option>
+                <option value="Custom">Custom Range</option>
+            </select>
+        </div>
+
+        @* Row 2: Custom date range (shown only when "Custom" is selected) + Sort + Reset *@
+        <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
+            @if (_datePreset == "Custom")
+            {
+                <div class="flex items-center gap-2 flex-1 min-w-[220px]">
+                    <label class="text-xs font-semibold text-gray-500 whitespace-nowrap">From</label>
+                    <input @bind="_dateFrom" @bind:after="ApplyFilters" type="date"
+                           class="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+                </div>
+                <div class="flex items-center gap-2 flex-1 min-w-[220px]">
+                    <label class="text-xs font-semibold text-gray-500 whitespace-nowrap">To</label>
+                    <input @bind="_dateTo" @bind:after="ApplyFilters" type="date"
+                           class="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+                </div>
+            }
+
+            <button @onclick="ToggleSort"
+                    class="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors whitespace-nowrap flex items-center gap-1.5"
+                    title="Sort by appointment date">
+                <i class="fa-solid fa-calendar-days text-gray-500"></i>
+                Date
+                @if (_sortAscending)
+                {
+                    <i class="fa-solid fa-arrow-up text-blue-600"></i>
+                }
+                else
+                {
+                    <i class="fa-solid fa-arrow-down text-blue-600"></i>
+                }
+            </button>
+
+            <button @onclick="ResetFilters"
+                    class="px-5 py-2.5 text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Reset
+            </button>
+        </div>
+    </div>
+
+    @* ── Content ───────────────────────────────────────────────── *@
     @if (_loading)
     {
         <LoadingSpinner Message="Loading your bookings..." />
@@ -18,7 +85,7 @@
     else if (_bookings == null || !_bookings.Any())
     {
         <EmptyState Icon="📅" Title="No bookings found"
-                    Message="You haven't received any service bookings yet." />
+                    Message="No bookings match your current filters." />
     }
     else
     {
@@ -33,6 +100,7 @@
                             <th class="px-6 py-4">Duration</th>
                             <th class="px-6 py-4">Price</th>
                             <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -61,44 +129,52 @@
                                     $@booking.Price.ToString("F2")
                                 </td>
                                 <td class="px-6 py-5">
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                                        @(booking.Status.Equals("Confirmed", StringComparison.OrdinalIgnoreCase) ? "bg-green-100 text-green-800" :
-                                          booking.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "bg-yellow-100 text-yellow-800" :
-                                          booking.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ? "bg-red-100 text-red-800" :
-                                          "bg-gray-100 text-gray-800")">
-                                        @booking.Status
-                                    </span>
+                                    <StatusBadge Status="@booking.Status" />
+                                </td>
+                                <td class="px-6 py-5">
+                                    <div class="flex items-center justify-center gap-2">
+                                        @if (booking.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <button @onclick="() => Approve(booking.Id)"
+                                                    class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                    title="Approve">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                            <button @onclick="() => Reject(booking.Id)"
+                                                    class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                                    title="Reject">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                            <button @onclick="() => Cancel(booking.Id)"
+                                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Cancel">
+                                                <i class="fa-solid fa-ban"></i>
+                                            </button>
+                                        }
+                                        else if (booking.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <button @onclick="() => Complete(booking.Id)"
+                                                    class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Mark as Completed">
+                                                <i class="fa-solid fa-calendar-check"></i>
+                                            </button>
+                                            <button @onclick="() => Cancel(booking.Id)"
+                                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Cancel">
+                                                <i class="fa-solid fa-ban"></i>
+                                            </button>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
+            <Pagination CurrentPage="_currentPage" TotalPages="_totalPages" TotalCount="_totalCount" OnPageChanged="OnPageChanged" />
         </div>
     }
 </div>
 
-@code {
-    private List<BookingModel>? _bookings;
-    private bool _loading = true;
 
-    protected override async Task OnInitializedAsync()
-    {
-        var staffId = await AuthService.GetUserIdAsync();
-        if (staffId.HasValue)
-        {
-            var result = await BookingService.GetStaffBookingsAsync(staffId.Value);
-            _bookings = result.Data?.OrderByDescending(b => b.Date).ThenByDescending(b => b.Time).ToList();
-        }
-        
-        _loading = false;
-    }
 
-    private string GetInitials(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return "U";
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 1) return parts[0].Substring(0, 1).ToUpper();
-        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
-    }
-}

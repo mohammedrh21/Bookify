@@ -1,193 +1,109 @@
-using Blazored.LocalStorage;
 using Bookify.Client.Models;
 using Bookify.Client.Models.Booking;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace Bookify.Client.Services;
 
 // ── Interface ────────────────────────────────────────────────────────────────
 public interface IBookingService
 {
-    Task<ApiResult<List<BookingModel>>> GetClientBookingsAsync(Guid clientId);
-    Task<ApiResult<List<BookingModel>>> GetStaffBookingsAsync(Guid staffId);
-    Task<ApiResult<List<BookingModel>>> GetAllBookingsAsync();
-    Task<ApiResult<Guid>>  CreateAsync(CreateBookingRequest request);
-    Task<ApiResult<bool>>  CancelAsync(Guid id, Guid requesterId, string requesterType);
-    Task<ApiResult<bool>>  ConfirmAsync(Guid id);
-    Task<ApiResult<bool>>  CompleteAsync(Guid id);
+    Task<ApiResult<List<BookingModel>>>         GetClientBookingsAsync(Guid clientId);
+    Task<ApiResult<List<BookingModel>>>         GetStaffBookingsAsync(Guid staffId, int page = 1, int pageSize = 10);
+    Task<ApiResult<PagedResult<BookingModel>>>  GetStaffBookingsPagedAsync(
+        Guid staffId, int page = 1, int pageSize = 10,
+        string? status = null, DateTime? from = null, DateTime? to = null,
+        string? search = null, bool sortAsc = true);
+    Task<ApiResult<PagedResult<BookingModel>>>  GetAllBookingsAsync(
+        int page = 1, int pageSize = 10, string? status = null,
+        string? search = null, string? staffName = null,
+        Guid? categoryId = null, DateTime? from = null, DateTime? to = null);
+    Task<ApiResult<Guid>>          CreateAsync(CreateBookingRequest request);
+    Task<ApiResult<bool>>          CancelAsync(Guid id, Guid requesterId, string requesterType);
+    Task<ApiResult<List<DateTime>>> GetOccupiedSlotsAsync(Guid serviceId, DateTime from, DateTime to);
+    Task<ApiResult<bool>>          ConfirmAsync(Guid id);
+    Task<ApiResult<bool>>          CompleteAsync(Guid id);
+    Task<ApiResult<BookingModel?>> GetByIdAsync(Guid id);
 }
 
 // ── Implementation ───────────────────────────────────────────────────────────
-public class BookingService(
-    HttpClient http,
-    ILocalStorageService localStorage,
-    ToastService toast) : IBookingService
+public class BookingService(HttpClient http, ToastService toast)
+    : BaseApiService(http, toast), IBookingService
 {
-    private async Task SetAuthHeaderAsync()
-    {
-        var token = await localStorage.GetItemAsync<string>("access_token");
-        http.DefaultRequestHeaders.Authorization = !string.IsNullOrEmpty(token)
-            ? new AuthenticationHeaderValue("Bearer", token)
-            : null;
-    }
-
-    private static async Task<List<string>> ReadErrorsAsync(HttpResponseMessage response, string fallback)
-    {
-        var errors = new List<string>();
-        try
-        {
-            var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-
-            // 1. Check for RFC 9110 validation errors dict
-            if (json.TryGetProperty("errors", out var errorsDict) && errorsDict.ValueKind == JsonValueKind.Object)
-            {
-                foreach (var prop in errorsDict.EnumerateObject())
-                {
-                    if (prop.Value.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var errStr in prop.Value.EnumerateArray())
-                        {
-                            if (errStr.ValueKind == JsonValueKind.String)
-                            {
-                                var val = errStr.GetString();
-                                if (!string.IsNullOrWhiteSpace(val)) errors.Add(val);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 2. Fallback to standard message property
-            if (errors.Count == 0 && json.TryGetProperty("message", out var msg) && msg.ValueKind == JsonValueKind.String)
-            {
-                var val = msg.GetString();
-                if (!string.IsNullOrWhiteSpace(val)) errors.Add(val);
-            }
-        }
-        catch { }
-
-        if (errors.Count == 0) errors.Add(fallback);
-        return errors;
-    }
-
-    private void ShowErrors(List<string> errors)
-    {
-        foreach (var error in errors)
-        {
-            toast.ShowError(error);
-        }
-    }
-
-    // ── Queries (no success toast — avoid noise on reads) ──────────────────
+    // ── Queries ──────────────────────────────────────────────────────────
 
     public async Task<ApiResult<List<BookingModel>>> GetClientBookingsAsync(Guid clientId)
     {
-        await SetAuthHeaderAsync();
-        var response = await http.GetAsync($"api/bookings/client/{clientId}");
-        if (!response.IsSuccessStatusCode)
-        {
-            var errors = await ReadErrorsAsync(response, "Failed to load your bookings.");
-            ShowErrors(errors);
-            return ApiResult<List<BookingModel>>.Fail(errors.FirstOrDefault() ?? "Error");
-        }
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<BookingModel>>>();
-        return ApiResult<List<BookingModel>>.Ok(result?.Data ?? []);
+        var result = await GetAsync<List<BookingModel>>($"api/bookings/client/{clientId}", "Failed to load your bookings.");
+        return ApiResult<List<BookingModel>>.Ok(result.Data ?? []);
     }
 
-    public async Task<ApiResult<List<BookingModel>>> GetStaffBookingsAsync(Guid staffId)
+    public async Task<ApiResult<List<BookingModel>>> GetStaffBookingsAsync(Guid staffId, int page = 1, int pageSize = 10)
     {
-        await SetAuthHeaderAsync();
-        var response = await http.GetAsync($"api/bookings/staff/{staffId}");
-        if (!response.IsSuccessStatusCode)
-        {
-            var errors = await ReadErrorsAsync(response, "Failed to load staff bookings.");
-            ShowErrors(errors);
-            return ApiResult<List<BookingModel>>.Fail(errors.FirstOrDefault() ?? "Error");
-        }
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<BookingModel>>>();
-        return ApiResult<List<BookingModel>>.Ok(result?.Data ?? []);
+        var result = await GetAsync<List<BookingModel>>($"api/bookings/staff/{staffId}?page={page}&pageSize={pageSize}", "Failed to load staff bookings.");
+        return ApiResult<List<BookingModel>>.Ok(result.Data ?? []);
     }
 
-    public async Task<ApiResult<List<BookingModel>>> GetAllBookingsAsync()
+    public async Task<ApiResult<PagedResult<BookingModel>>> GetStaffBookingsPagedAsync(
+        Guid staffId, int page = 1, int pageSize = 10,
+        string? status = null, DateTime? from = null, DateTime? to = null,
+        string? search = null, bool sortAsc = true)
     {
-        await SetAuthHeaderAsync();
-        var response = await http.GetAsync("api/bookings");
-        if (!response.IsSuccessStatusCode)
-        {
-            var errors = await ReadErrorsAsync(response, "Failed to load bookings.");
-            ShowErrors(errors);
-            return ApiResult<List<BookingModel>>.Fail(errors.FirstOrDefault() ?? "Error");
-        }
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<BookingModel>>>();
-        return ApiResult<List<BookingModel>>.Ok(result?.Data ?? []);
+        var url = $"api/bookings/staff/{staffId}?page={page}&pageSize={pageSize}&sortAsc={sortAsc}";
+        if (!string.IsNullOrWhiteSpace(status)) url += $"&status={Uri.EscapeDataString(status)}";
+        if (!string.IsNullOrWhiteSpace(search)) url += $"&search={Uri.EscapeDataString(search)}";
+        if (from.HasValue) url += $"&from={from.Value:yyyy-MM-dd}";
+        if (to.HasValue)   url += $"&to={to.Value:yyyy-MM-dd}";
+
+        var result = await GetAsync<PagedResult<BookingModel>>(url, "Failed to load staff bookings.");
+        return ApiResult<PagedResult<BookingModel>>.Ok(result.Data ?? new PagedResult<BookingModel>());
+    }
+
+    public async Task<ApiResult<PagedResult<BookingModel>>> GetAllBookingsAsync(
+        int page = 1, int pageSize = 10,
+        string? status     = null,
+        string? search     = null,
+        string? staffName  = null,
+        Guid?   categoryId = null,
+        DateTime? from     = null,
+        DateTime? to       = null)
+    {
+        var url = $"api/bookings?page={page}&pageSize={pageSize}";
+        if (!string.IsNullOrWhiteSpace(status))    url += $"&status={Uri.EscapeDataString(status)}";
+        if (!string.IsNullOrWhiteSpace(search))    url += $"&search={Uri.EscapeDataString(search)}";
+        if (!string.IsNullOrWhiteSpace(staffName)) url += $"&staffName={Uri.EscapeDataString(staffName)}";
+        if (categoryId.HasValue)                   url += $"&categoryId={categoryId.Value}";
+        if (from.HasValue)                         url += $"&from={from.Value:yyyy-MM-dd}";
+        if (to.HasValue)                           url += $"&to={to.Value:yyyy-MM-dd}";
+
+        var result = await GetAsync<PagedResult<BookingModel>>(url, "Failed to load bookings.");
+        return ApiResult<PagedResult<BookingModel>>.Ok(result.Data ?? new PagedResult<BookingModel>());
     }
 
     // ── Commands ──────────────────────────────────────────────────────────
 
     public async Task<ApiResult<Guid>> CreateAsync(CreateBookingRequest request)
+        => await PostAsync<CreateBookingRequest, Guid>("api/bookings", request, "Failed to create booking.");
+
+    public async Task<ApiResult<List<DateTime>>> GetOccupiedSlotsAsync(Guid serviceId, DateTime from, DateTime to)
     {
-        await SetAuthHeaderAsync();
-        var response = await http.PostAsJsonAsync("api/bookings", request);
-        if (!response.IsSuccessStatusCode)
-        {
-            var errors = await ReadErrorsAsync(response, "Failed to create booking.");
-            ShowErrors(errors);
-            return ApiResult<Guid>.Fail(errors.FirstOrDefault() ?? "Error");
-        }
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
-        var msg = result?.Message ?? "Booking created successfully.";
-        toast.ShowSuccess(msg);
-        return ApiResult<Guid>.Ok(result?.Data ?? Guid.Empty, msg);
+        var url = $"api/bookings/service/{serviceId}/occupied-slots?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
+        var result = await GetAsync<List<DateTime>>(url, "Failed to load occupied slots.");
+        return ApiResult<List<DateTime>>.Ok(result.Data ?? []);
     }
 
     public async Task<ApiResult<bool>> CancelAsync(Guid id, Guid requesterId, string requesterType)
     {
-        await SetAuthHeaderAsync();
         var body = new { BookingId = id, RequesterId = requesterId, RequesterType = requesterType };
-        var response = await http.PostAsJsonAsync($"api/bookings/{id}/cancel", body);
-        if (!response.IsSuccessStatusCode)
-        {
-            var errors = await ReadErrorsAsync(response, "Failed to cancel booking.");
-            ShowErrors(errors);
-            return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
-        }
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
-        var msg = result?.Message ?? "Booking cancelled successfully.";
-        toast.ShowSuccess(msg);
-        return ApiResult<bool>.Ok(true, msg);
+        return await PostAsync($"api/bookings/{id}/cancel", body, "Failed to cancel booking.");
     }
 
     public async Task<ApiResult<bool>> ConfirmAsync(Guid id)
-    {
-        await SetAuthHeaderAsync();
-        var response = await http.PostAsync($"api/bookings/{id}/confirm", null);
-        if (!response.IsSuccessStatusCode)
-        {
-            var errors = await ReadErrorsAsync(response, "Failed to confirm booking.");
-            ShowErrors(errors);
-            return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
-        }
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
-        var msg = result?.Message ?? "Booking confirmed successfully.";
-        toast.ShowSuccess(msg);
-        return ApiResult<bool>.Ok(true, msg);
-    }
+        => await PostAsync($"api/bookings/{id}/confirm", (object)null!, "Failed to confirm booking.");
 
     public async Task<ApiResult<bool>> CompleteAsync(Guid id)
-    {
-        await SetAuthHeaderAsync();
-        var response = await http.PostAsync($"api/bookings/{id}/complete", null);
-        if (!response.IsSuccessStatusCode)
-        {
-            var errors = await ReadErrorsAsync(response, "Failed to complete booking.");
-            ShowErrors(errors);
-            return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
-        }
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
-        var msg = result?.Message ?? "Booking completed successfully.";
-        toast.ShowSuccess(msg);
-        return ApiResult<bool>.Ok(true, msg);
-    }
+        => await PostAsync($"api/bookings/{id}/complete", (object)null!, "Failed to complete booking.");
+
+    public async Task<ApiResult<BookingModel?>> GetByIdAsync(Guid id)
+        => await GetAsync<BookingModel?>($"api/bookings/{id}", "Booking not found.");
 }
+

@@ -81,7 +81,7 @@ namespace Bookify.Infrastructure.Identity
                 EmailConfirmed = true,
                 FullName = adminName,
                 PhoneNumber = adminPhone,
-                PhoneNumberConfirmed = true,
+                PhoneNumberConfirmed = true
             };
 
             var result = await _userManager.CreateAsync(adminUser, adminPassword);

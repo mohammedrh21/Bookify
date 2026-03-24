@@ -1,0 +1,50 @@
+<div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+    <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 @GetBgColor() @GetTextColor() rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+            <i class="fas @Icon"></i>
+        </div>
+        @if (Trend != 0)
+        {
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold @(Trend > 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600")">
+                <i class="fas @(Trend > 0 ? "fa-arrow-up" : "fa-arrow-down")"></i>
+                @Math.Abs(Trend).ToString("N1")%
+            </div>
+        }
+    </div>
+    
+    <div>
+        <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">@Title</p>
+        <div class="flex items-baseline gap-2 mt-1">
+            <p class="text-3xl font-black text-gray-900">@Value</p>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">vs previous period</p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public double Trend { get; set; }
+    [Parameter] public string Icon { get; set; } = "fa-chart-bar";
+    [Parameter] public string Color { get; set; } = "blue";
+
+    private string GetBgColor() => Color switch
+    {
+        "blue" => "bg-blue-50",
+        "amber" => "bg-amber-50",
+        "green" => "bg-green-50",
+        "purple" => "bg-purple-50",
+        "red" => "bg-red-50",
+        _ => "bg-gray-50"
+    };
+
+    private string GetTextColor() => Color switch
+    {
+        "blue" => "text-blue-600",
+        "amber" => "text-amber-600",
+        "green" => "text-green-600",
+        "purple" => "text-purple-600",
+        "red" => "text-red-600",
+        _ => "text-gray-600"
+    };
+}

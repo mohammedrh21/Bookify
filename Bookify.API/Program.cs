@@ -1,5 +1,6 @@
 using Bookify.API.Middleware;
 using Bookify.Application.Interfaces;
+using Bookify.Application;
 using Bookify.Infrastructure;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
@@ -85,9 +86,21 @@ builder.Services.AddSwaggerGen(options =>
 
 
 // ============================
-// Infrastructure Services
+// Application & Infrastructure Services
 // ============================
+builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// ============================
+// Authorization Policies
+// ============================
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly",      p => p.RequireRole("Admin"));
+    options.AddPolicy("StaffOnly",      p => p.RequireRole("Staff"));
+    options.AddPolicy("StaffOrAdmin",   p => p.RequireRole("Staff", "Admin"));
+    options.AddPolicy("ClientOnly",     p => p.RequireRole("Client"));
+});
 
 // ============================
 // CORS Configuration
@@ -102,7 +115,7 @@ builder.Services.AddCors(options =>
 
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod()
+            .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .AllowCredentials()
             .WithExposedHeaders("Token-Expired");
     });
@@ -116,15 +129,32 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.User.Identity?.Name ?? context.Request.Headers.Host.ToString(),
+    {
+        // Apply strict limit (10 requests / min) for auth endpoints to prevent brute-force
+        if (context.Request.Path.StartsWithSegments("/api/auth", StringComparison.OrdinalIgnoreCase))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: partition => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 10,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                });
+        }
+
+        // Standard global limit for other endpoints (100 rq / min)
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User.Identity?.Name ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
                 PermitLimit = 100,
                 QueueLimit = 0,
                 Window = TimeSpan.FromMinutes(1)
-            }));
+            });
+    });
 
     options.OnRejected = async (context, _) =>
     {
@@ -153,6 +183,9 @@ var app = builder.Build();
 // Global Exception Handler (FIRST - to catch all exceptions)
 app.UseGlobalExceptionHandler(app.Environment);
 
+// Custom Security Headers
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 // Serilog Request Logging
 app.UseSerilogRequestLogging();
 
@@ -169,6 +202,11 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty; // Swagger at root
         c.DocumentTitle = "Bookify API Documentation";
     });
+}
+else
+{
+    // HSTS strictly enforced in production
+    app.UseHsts();
 }
 
 // HTTPS Redirection
@@ -191,7 +229,11 @@ using (var scope = app.Services.CreateScope())
     var seeder = scope.ServiceProvider.GetRequiredService<IIdentitySeeder>();
     await seeder.SeedAsync();
 }
-
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<IDatabaseSeeder>();
+    await seeder.SeedDatabase();
+}
 // Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();

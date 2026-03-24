@@ -1,6 +1,16 @@
-<div class="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm hover-lift flex flex-col group relative">
-    <!-- Top color band -->
-    <div class="h-2 bg-gradient-to-r from-primary-400 via-blue-500 to-indigo-600"></div>
+<a href="/service/@Service.Id" class="block bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm hover-lift flex flex-col group relative">
+    @if (!string.IsNullOrEmpty(Service.ImagePath))
+    {
+        <div class="h-40 w-full relative overflow-hidden">
+            <img src="@Service.ImagePath" alt="@Service.Name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+        </div>
+    }
+    else
+    {
+        <!-- Top color band fallback -->
+        <div class="h-2 bg-gradient-to-r from-primary-400 via-blue-500 to-indigo-600"></div>
+    }
 
     <div class="p-5 flex flex-col flex-1">
 
@@ -15,9 +25,28 @@
             </span>
         </div>
 
+        <!-- Rating -->
+        <div class="flex items-center gap-1.5 mb-3">
+            <div class="flex items-center text-amber-400 text-xs">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    if (i <= Math.Round(Service.Rating))
+                    {
+                        <i class="fas fa-star"></i>
+                    }
+                    else
+                    {
+                        <i class="far fa-star"></i>
+                    }
+                }
+            </div>
+            <span class="text-xs font-bold text-gray-900">@Service.Rating.ToString("F1")</span>
+            <span class="text-xs text-gray-400">(@Service.ReviewCount)</span>
+        </div>
+
         <!-- Description -->
-        <p class="text-gray-400 text-sm mb-4 line-clamp-2 flex-1">
-            @Service.Description
+        <p class="text-gray-400 text-sm mb-4 flex-1">
+            @(string.IsNullOrEmpty(Service.Description) ? "" : (Service.Description.Length > 20 ? Service.Description.Substring(0, 20) + ".." : Service.Description))
         </p>
 
         <!-- Info Row -->
@@ -33,19 +62,6 @@
                 <span class="font-semibold text-gray-800">@Service.Duration min</span>
             </div>
 
-            <!-- Availability -->
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
-                        <i class="fa-regular fa-calendar-check text-xs"></i>
-                    </div>
-                    <span>Available</span>
-                </div>
-                <span class="font-semibold text-gray-800">
-                    @DateTime.Today.Add(Service.TimeStart).ToString("hh:mm tt") - @DateTime.Today.Add(Service.TimeEnd).ToString("hh:mm tt")
-                </span>
-            </div>
-
             <!-- Staff -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -59,13 +75,12 @@
         </div>
 
         <!-- Button -->
-        <a href="/book/@Service.Id"
-           class="block w-full text-center py-3.5 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white font-bold rounded-2xl text-sm transition-all shadow-md shadow-primary-500/20 hover:shadow-lg hover:shadow-primary-500/40">
-            Book Now
-        </a>
+        <div class="block w-full text-center py-3.5 bg-gradient-to-r from-primary-600 to-indigo-600 group-hover:from-primary-700 group-hover:to-indigo-700 text-white font-bold rounded-2xl text-sm transition-all shadow-md shadow-primary-500/20 group-hover:shadow-lg group-hover:shadow-primary-500/40">
+            View Details
+        </div>
 
     </div>
-</div>
+</a>
 
 @code {
     [Parameter] public ServiceModel Service { get; set; } = default!;
