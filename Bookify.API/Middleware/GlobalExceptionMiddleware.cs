@@ -1,6 +1,6 @@
-﻿using Bookify.Domain.Exceptions;
+using Bookify.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Text.Json;
@@ -165,11 +165,11 @@ namespace Bookify.API.Middleware
                     "The record was modified by another user. Please refresh and try again.",
                     $"Affected entries: {concurrency.Entries.Count}"),
 
-                DbUpdateException dbEx when dbEx.InnerException is SqlException sqlEx => (
-                    GetSqlStatusCode(sqlEx),
+                DbUpdateException dbEx when dbEx.InnerException is PostgresException pgEx => (
+                    GetPostgresStatusCode(pgEx),
                     "DatabaseError",
                     "A database error occurred.",
-                    GetSqlDetails(sqlEx)),
+                    GetPostgresDetails(pgEx)),
 
                 // ── Standard .NET exceptions ─────────────────
                 ArgumentNullException argNull => (
@@ -210,24 +210,23 @@ namespace Bookify.API.Middleware
                     null)
             };
 
-        private static HttpStatusCode GetSqlStatusCode(SqlException ex) => ex.Number switch
+        private static HttpStatusCode GetPostgresStatusCode(PostgresException ex) => ex.SqlState switch
         {
-            547 or 2601 or 2627 => HttpStatusCode.Conflict,
-            -2 or -2146232060 => HttpStatusCode.RequestTimeout,
-            4060 or 18456 => HttpStatusCode.ServiceUnavailable,
+            "23503" or "23505" => HttpStatusCode.Conflict,
+            "57014" => HttpStatusCode.RequestTimeout,
+            "28000" or "28P01" => HttpStatusCode.ServiceUnavailable,
             _ => HttpStatusCode.InternalServerError
         };
-
-        private static string GetSqlDetails(SqlException ex) => ex.Number switch
+ 
+        private static string GetPostgresDetails(PostgresException ex) => ex.SqlState switch
         {
-            2627 => "A record with this identifier already exists.",
-            2601 => "A record with this value already exists.",
-            547 => "Cannot complete: record is referenced by other data.",
-            515 => "Cannot insert NULL into a required field.",
-            8152 => "The provided data is too long for the target field.",
-            1205 => "A database deadlock occurred. Please retry the operation.",
-            208 => "Database table not found. Run 'dotnet ef database update'.",
-            _ => $"SQL error {ex.Number}."
+            "23505" => "A record with this value already exists (Unique constraint violation).",
+            "23503" => "Cannot complete: the record is referenced by other data or references non-existent data (Foreign key violation).",
+            "23502" => "Cannot insert NULL into a required field.",
+            "22001" => "The provided data is too long for the target field.",
+            "40P01" => "A database deadlock occurred. Please retry the operation.",
+            "42P01" => "Database table not found. Run 'dotnet ef database update'.",
+            _ => $"PostgreSQL error: {ex.MessageText} (State: {ex.SqlState})."
         };
 
         private void LogError(HttpContext context, Exception exception, ErrorResponse response)

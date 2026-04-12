@@ -1,8 +1,6 @@
 using Bookify.Application.Common;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Identity.Client;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 

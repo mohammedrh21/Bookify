@@ -82,22 +82,24 @@ public static class DependencyInjection
         IServiceCollection services,
         IConfiguration configuration)
     {
+        var connectionString = configuration.GetConnectionString("PostgresConnection");
+
         services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("MssqlConnection"),
-                sql =>
+            options.UseNpgsql(
+                connectionString,
+                npgsql =>
                 {
-                    sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
-                    sql.EnableRetryOnFailure(
+                    npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+                    npgsql.EnableRetryOnFailure(
                         maxRetryCount: 5,
                         maxRetryDelay: TimeSpan.FromSeconds(30),
-                        errorNumbersToAdd: null);
-                    sql.CommandTimeout(30);
+                        errorCodesToAdd: null);
+                    npgsql.CommandTimeout(30);
                 })
             .ConfigureWarnings(w =>
                 w.Log(RelationalEventId.PendingModelChangesWarning))
-            .EnableSensitiveDataLogging(false) // Disable in production
-            .EnableDetailedErrors(false) // Disable in production
+            .EnableSensitiveDataLogging(false)
+            .EnableDetailedErrors(false)
         );
     }
 

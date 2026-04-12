@@ -3,6 +3,8 @@ using Bookify.API.Filters;
 using Bookify.Application.Interfaces;
 using Bookify.Application;
 using Bookify.Infrastructure;
+using Bookify.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Serilog;
@@ -266,10 +268,24 @@ app.UseCors();
 app.UseRateLimiter();
 
 // ============================
-// Seed Identity Data
+// Database Migrations & Seeding
 // ============================
 using (var scope = app.Services.CreateScope())
 {
+    try 
+    {
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (context.Database.GetPendingMigrations().Any())
+        {
+            Log.Information("Applying pending migrations...");
+            await context.Database.MigrateAsync();
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "An error occurred while applying migrations.");
+    }
+
     var seeder = scope.ServiceProvider.GetRequiredService<IIdentitySeeder>();
     await seeder.SeedAsync();
 }
