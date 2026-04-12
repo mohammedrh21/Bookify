@@ -83,6 +83,17 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("PostgresConnection");
+        
+        // Handle postgresql:// URIs (common on Render)
+        if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        {
+            connectionString = ConvertPostgresUriToConnectionString(connectionString);
+        }
+
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException("PostgresConnection connection string is not configured.");
+        }
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(
@@ -101,6 +112,25 @@ public static class DependencyInjection
             .EnableSensitiveDataLogging(false)
             .EnableDetailedErrors(false)
         );
+    }
+
+    private static string ConvertPostgresUriToConnectionString(string uri)
+    {
+        var databaseUri = new Uri(uri);
+        var userInfo = databaseUri.UserInfo.Split(':');
+        
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder
+        {
+            Host = databaseUri.Host,
+            Port = databaseUri.Port > 0 ? databaseUri.Port : 5432,
+            Username = userInfo[0],
+            Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+            Database = databaseUri.LocalPath.TrimStart('/'),
+            SslMode = Npgsql.SslMode.Require,
+            TrustServerCertificate = true
+        };
+
+        return builder.ToString();
     }
 
     // ============================
