@@ -64,7 +64,13 @@ namespace Bookify.Application.Mapping
                 .ForMember(d => d.CategoryName,
                            o => o.MapFrom(s => s.Service != null && s.Service.Category != null 
                                ? s.Service.Category.Name 
-                               : string.Empty));
+                               : string.Empty))
+                .ForMember(d => d.PaymentStatus,
+                           o => o.MapFrom(s => s.Payment != null 
+                               ? s.Payment.Status.ToString() 
+                               : "Pending"))
+                .ForMember(d => d.IsReviewed,
+                           o => o.MapFrom(s => s.Review != null));
 
             // ── FAQ ────────────────────────────────────────────────
             CreateMap<Bookify.Application.DTO.FAQ.CreateFAQRequest, FAQ>();
@@ -84,6 +90,10 @@ namespace Bookify.Application.Mapping
             CreateMap<Review, ReviewDto>()
                 .ForMember(d => d.ServiceName, o => o.MapFrom(s => s.Service != null ? s.Service.Name : string.Empty))
                 .ForMember(d => d.ClientName, o => o.MapFrom(s => s.Client != null ? s.Client.FullName : string.Empty));
+
+            // ── Notification ──────────────────────────────────────────
+            CreateMap<Notification, Bookify.Application.DTO.Notification.NotificationDto>()
+                .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()));
         }
     }
 }

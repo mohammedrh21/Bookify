@@ -1,0 +1,118 @@
+@page "/staff/clients"
+@attribute [Authorize(Policy = "StaffOnly")]
+
+<PageTitle>My Clients — Bookify Staff</PageTitle>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">My Clients</h1>
+            <p class="text-gray-500 mt-1">Manage and view the history of clients who booked your services.</p>
+        </div>
+    </div>
+
+    @* ── Filter Panel ──────────────────────────────────────────── *@
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6 space-y-4">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input value="@_search" @oninput="OnSearchChanged"
+                       placeholder="Search by client name or email..."
+                       class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+            </div>
+
+            <div class="flex items-center gap-2 flex-1 min-w-[220px]">
+                <label class="text-xs font-semibold text-gray-500 whitespace-nowrap">Booked After</label>
+                <input @bind="_dateFilter" @bind:after="ApplyFilters" type="date"
+                       class="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+            </div>
+
+            <button @onclick="ResetFilters"
+                    class="px-5 py-2.5 text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Reset
+            </button>
+        </div>
+    </div>
+
+    @* ── Content ───────────────────────────────────────────────── *@
+    @if (_loading)
+    {
+        <LoadingSpinner Message="Loading your clients..." />
+    }
+    else if (_clients == null || !_clients.Any())
+    {
+        <EmptyState Icon="👥" Title="No clients found"
+                    Message="No clients match your current filters or you don't have any bookings yet." />
+    }
+    else
+    {
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-100 text-gray-500 text-sm font-medium uppercase tracking-wider">
+                            <th class="px-6 py-4">Client</th>
+                            <th class="px-6 py-4">Contact</th>
+                            <th class="px-6 py-4 text-center">Bookings</th>
+                            <th class="px-6 py-4 text-center">Last Booked</th>
+                            <th class="px-6 py-4 text-right">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach (var client in _clients)
+                        {
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-5">
+                                    <div class="flex items-center gap-3 cursor-pointer" @onclick="() => NavigateToDetails(client.ClientId)">
+                                        @if (!string.IsNullOrEmpty(client.ImagePath))
+                                        {
+                                            <img src="@client.ImagePath" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" alt="@client.FullName" />
+                                        }
+                                        else
+                                        {
+                                            <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white">
+                                                @GetInitials(client.FullName)
+                                            </div>
+                                        }
+                                        <div class="font-semibold text-gray-900 hover:text-primary-600 transition-colors">@client.FullName</div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-5 text-gray-600 cursor-pointer" @onclick="() => NavigateToDetails(client.ClientId)">
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center gap-2 hover:text-primary-600 transition-colors">
+                                            <i class="fa-solid fa-envelope text-gray-400 text-xs"></i>
+                                            <span class="text-sm">@client.Email</span>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(client.Phone))
+                                        {
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-phone text-gray-400 text-xs"></i>
+                                                <span class="text-sm">@client.Phone</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="px-6 py-5 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        @client.TotalBookings Bookings
+                                    </span>
+                                </td>
+                                <td class="px-6 py-5 text-center text-sm text-gray-600">
+                                    @(client.LastBookingDate?.ToString("MMM dd, yyyy") ?? "N/A")
+                                </td>
+                                <td class="px-6 py-5 text-right">
+                                    <button @onclick="() => NavigateToDetails(client.ClientId)"
+                                            class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 hover:text-primary-600 hover:border-primary-200 transition-all shadow-sm">
+                                        <span>View</span>
+                                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <Pagination CurrentPage="_page" TotalPages="_totalPages" TotalCount="_totalCount" OnPageChanged="OnPageChanged" />
+        </div>
+    }
+</div>

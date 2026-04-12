@@ -1,18 +1,19 @@
 @page "/"
 @using Bookify.Client.Components.UI.Home
 <PageTitle>Bookify — Book Services Online</PageTitle>
-<div class="w-full">
+<div class="w-full overflow-x-hidden">
 
     <HomeHero />
-    <HowItWorks />
-    <ProviderHighlights />
-    <TrustSection />
+    
+    <StatsBar />
+
     <!-- ── Categories ─────────────────────────────────────────────────────────── -->
-    <section class="py-16 bg-white">
+    <section class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-10">
-                <h2 class="text-3xl font-bold text-gray-900">Browse by Category</h2>
-                <p class="text-gray-400 mt-2">Find the service that fits your needs</p>
+            <div class="text-center mb-16">
+                <h2 class="text-3xl lg:text-4xl font-extrabold text-slate-900">Browse by Category</h2>
+                <div class="w-20 h-1.5 bg-primary-500 mx-auto mt-6 rounded-full"></div>
+                <p class="text-slate-500 mt-6 max-w-2xl mx-auto">Discover a wide range of professional services tailored to your needs.</p>
             </div>
 
             @if (_loadingCategories)
@@ -25,7 +26,7 @@
             }
             else
             {
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                     @foreach (var cat in _categories)
                     {
                         <CategoryCard Category="cat"
@@ -33,49 +34,64 @@
                                       OnClick="() => SelectCategory(cat.Id)" />
                     }
                 </div>
+
+                <div class="mt-16 text-center">
+                    <a href="/services" 
+                       class="inline-flex items-center gap-3 px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-2xl hover:border-primary-500 hover:text-primary-600 hover:bg-primary-50/50 transition-all duration-300 group shadow-sm hover:shadow-primary-500/10">
+                        <span>Explore All Categories</span>
+                        <i class="fa-solid fa-arrow-right-long group-hover:translate-x-1.5 transition-transform duration-300"></i>
+                    </a>
+                </div>
             }
         </div>
     </section>
 
+    <!-- ── Featured Services ──────────────────────────────────────────────────── -->
+    <section class="py-24 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+                <div>
+                    <h2 class="text-3xl lg:text-4xl font-extrabold text-slate-900">Featured Services</h2>
+                    <p class="text-slate-500 mt-4">Hand-picked services from our most trusted providers</p>
+                </div>
+                <a href="/services"
+                   class="inline-flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-2xl hover:bg-slate-50 transition-all hover-lift">
+                    View all services
+                    <i class="fa-solid fa-arrow-right text-primary-500"></i>
+                </a>
+            </div>
+
+            @if (_loadingServices)
+            {
+                <LoadingSpinner />
+            }
+            else if (_services.Count == 0)
+            {
+                <EmptyState Icon="🛎️" Title="No services yet" Message="Services will appear here soon." />
+            }
+            else
+            {
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    @foreach (var svc in _services.Where(x => !x.IsDeleted).Take(8))
+                    {
+                        <ServiceCard Service="svc" />
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    <HowItWorks />
+    
+    <ProviderHighlights />
+    
+    <Testimonials />
+    
+    <TrustSection />
+
     <FinalCTA />
 </div>
 
-<!-- ── Featured Services ──────────────────────────────────────────────────── -->
-<section class="py-16 bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between mb-10">
-            <div>
-                <h2 class="text-3xl font-bold text-gray-900">Featured Services</h2>
-                <p class="text-gray-400 mt-1">Popular services available right now</p>
-            </div>
-            <a href="/services"
-               class="text-primary-600 hover:text-primary-700 font-semibold text-sm flex items-center gap-1">
-                View all
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-            </a>
-        </div>
-
-        @if (_loadingServices)
-        {
-            <LoadingSpinner />
-        }
-        else if (_services.Count == 0)
-        {
-            <EmptyState Icon="🛎️" Title="No services yet" Message="Services will appear here soon." />
-        }
-        else
-        {
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                @foreach (var svc in _services.Where(x=>!x.IsDeleted).Take(8))
-                {
-                    <ServiceCard Service="svc" />
-                }
-            </div>
-        }
-    </div>
-</section>
 
 
 

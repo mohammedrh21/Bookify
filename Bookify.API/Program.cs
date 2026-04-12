@@ -1,4 +1,5 @@
 using Bookify.API.Middleware;
+using Bookify.API.Filters;
 using Bookify.Application.Interfaces;
 using Bookify.Application;
 using Bookify.Infrastructure;
@@ -7,6 +8,10 @@ using Microsoft.OpenApi;
 using Serilog;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +37,15 @@ builder.Host.UseSerilog((context, configuration) =>
 // ============================
 // Controllers with JSON Configuration
 // ============================
-builder.Services.AddControllers()
+builder.Services.AddControllers(options => 
+    {
+        options.Filters.Add<ValidationFilter>();
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Suppress default model state validation since we use FluentValidation
+        options.SuppressModelStateInvalidFilter = true;
+    })
     .AddJsonOptions(opt =>
     {
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -44,8 +57,6 @@ builder.Services.AddControllers()
 builder.AddServiceDefaults();
 
 // Add services to the container.
-
-builder.Services.AddControllers();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -92,6 +103,30 @@ builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // ============================
+// Firebase Initialization
+// ============================
+var firebaseServiceAccountPath = builder.Configuration["Firebase:ServiceAccountKeyPath"];
+if (!string.IsNullOrEmpty(firebaseServiceAccountPath) && File.Exists(firebaseServiceAccountPath))
+{
+    using (var stream = new FileStream(firebaseServiceAccountPath, FileMode.Open, FileAccess.Read))
+    {
+        FirebaseApp.Create(new AppOptions
+        {
+            Credential = CredentialFactory.FromStream<ServiceAccountCredential>(stream).ToGoogleCredential()
+        });
+    }
+}
+else
+{
+    // Make sure to log via Serilog if it's already configured or statically.
+    Log.Warning("Firebase Service Account JSON file not found at {Path}. Push notifications will be disabled.", firebaseServiceAccountPath ?? "null");
+}
+
+
+// Background Services
+builder.Services.AddHostedService<Bookify.API.Services.NotificationCleanupService>();
+
+// ============================
 // Authorization Policies
 // ============================
 builder.Services.AddAuthorization(options =>
@@ -103,6 +138,15 @@ builder.Services.AddAuthorization(options =>
 });
 
 // ============================
+// Forwarded Headers (Essential for Proxy Hosting like runasp.net)
+// ============================
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownProxies.Clear();
+});
+
+// ============================
 // CORS Configuration
 // ============================
 builder.Services.AddCors(options =>
@@ -111,7 +155,7 @@ builder.Services.AddCors(options =>
     {
         var allowedOrigins = builder.Configuration
             .GetSection("AllowedOrigins")
-            .Get<string[]>() ?? new[] { "https://localhost:5138", "http://localhost:5138" };
+            .Get<string[]>() ?? new[] { "https://localhost:5138", "https://bookify-dev.netlify.app","http://bookify-dev.netlify.app/", "http://localhost:5138" };
 
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
@@ -180,6 +224,9 @@ var app = builder.Build();
 // Middleware Pipeline
 // ============================
 
+// Forwarded Headers (MUST be first)
+app.UseForwardedHeaders();
+
 // Global Exception Handler (FIRST - to catch all exceptions)
 app.UseGlobalExceptionHandler(app.Environment);
 
@@ -192,20 +239,17 @@ app.UseSerilogRequestLogging();
 // Default endpoints from Aspire
 app.MapDefaultEndpoints();
 
-// Swagger in Development
-if (app.Environment.IsDevelopment())
+// Swagger enabled in all environments for API access
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Bookify API v1");
-        c.RoutePrefix = string.Empty; // Swagger at root
-        c.DocumentTitle = "Bookify API Documentation";
-    });
-}
-else
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Bookify API v1");
+    c.DocumentTitle = "Bookify API Documentation";
+});
+
+// HSTS strictly enforced in production
+if (!app.Environment.IsDevelopment())
 {
-    // HSTS strictly enforced in production
     app.UseHsts();
 }
 

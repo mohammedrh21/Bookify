@@ -35,12 +35,12 @@ public partial class BookService : ComponentBase
             }
             else
             {
-                ToastService.ShowError(result.Message ?? "Failed to load service details.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while loading the service.");
+            // unexpected error
         }
         finally
         {
@@ -94,12 +94,12 @@ public partial class BookService : ComponentBase
             }
             else
             {
-                ToastService.ShowError(sessionResult.Message ?? "Failed to initialize checkout.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred during the booking process.");
+            // unexpected error
         }
         finally
         {

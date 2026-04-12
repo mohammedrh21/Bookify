@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Enums;
+using Bookify.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -18,9 +18,13 @@ namespace Bookify.Domain.Entities
         public string FullName { get; set; } = default!;
 
         [Required]
+        [StringLength(15, MinimumLength = 7, ErrorMessage = "Phone number must be between 7 and 15 characters.")]
         public string Phone { get; set; } = default!;
 
         public bool IsActive { get; set; } = true;
+
+        // Navigation: user notifications
+        public ICollection<Notification>? Notifications { get; set; }
     }
 
     // =====================================

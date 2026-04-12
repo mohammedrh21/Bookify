@@ -145,11 +145,6 @@
                                                     title="Reject">
                                                 <i class="fa-solid fa-times"></i>
                                             </button>
-                                            <button @onclick="() => Cancel(booking.Id)"
-                                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Cancel">
-                                                <i class="fa-solid fa-ban"></i>
-                                            </button>
                                         }
                                         else if (booking.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                                         {
@@ -157,11 +152,6 @@
                                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                     title="Mark as Completed">
                                                 <i class="fa-solid fa-calendar-check"></i>
-                                            </button>
-                                            <button @onclick="() => Cancel(booking.Id)"
-                                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Cancel">
-                                                <i class="fa-solid fa-ban"></i>
                                             </button>
                                         }
                                     </div>

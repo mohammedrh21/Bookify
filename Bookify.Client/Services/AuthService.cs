@@ -11,8 +11,9 @@ namespace Bookify.Client.Services;
 public interface IAuthService
 {
     Task<ApiResult<LoginResponseModel>> LoginAsync(LoginRequest request);
-    Task<ApiResult<Guid>> RegisterClientAsync(RegisterRequest request);
-    Task<ApiResult<Guid>> RegisterStaffAsync(RegisterRequest request);
+    Task<ApiResult<bool>> RegisterClientAsync(RegisterRequest request);
+    Task<ApiResult<bool>> RegisterStaffAsync(RegisterRequest request);
+    Task<ApiResult<Guid>> VerifyRegistrationOtpAsync(VerifyRegistrationOtpRequestModel request);
 
     Task LogoutAsync();
     Task<string?> GetTokenAsync();
@@ -117,7 +118,7 @@ public class AuthService(
         return ApiResult<LoginResponseModel>.Ok(login, result.Message);
     }
 
-    public async Task<ApiResult<Guid>> RegisterClientAsync(RegisterRequest request)
+    public async Task<ApiResult<bool>> RegisterClientAsync(RegisterRequest request)
     {
         var httpResponse = await http.PostAsJsonAsync("api/auth/register/client", new
         {
@@ -131,15 +132,14 @@ public class AuthService(
         if (!httpResponse.IsSuccessStatusCode)
         {
             var errors = await ReadErrorMessagesAsync(httpResponse, "Registration failed. Please try again.");
-            return ApiResult<Guid>.Fail(errors.FirstOrDefault() ?? "Error");
+            return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
         }
 
-        var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
-        var msg = result?.Message ?? "Client registered successfully.";
-        return ApiResult<Guid>.Ok(result?.Id ?? Guid.Empty, msg);
+        var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+        return ApiResult<bool>.Ok(true, result?.Message ?? "OTP sent to your email.");
     }
 
-    public async Task<ApiResult<Guid>> RegisterStaffAsync(RegisterRequest request)
+    public async Task<ApiResult<bool>> RegisterStaffAsync(RegisterRequest request)
     {
         var httpResponse = await http.PostAsJsonAsync("api/auth/register/staff", new
         {
@@ -152,12 +152,25 @@ public class AuthService(
         if (!httpResponse.IsSuccessStatusCode)
         {
             var errors = await ReadErrorMessagesAsync(httpResponse, "Registration failed. Please try again.");
+            return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
+        }
+
+        var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+        return ApiResult<bool>.Ok(true, result?.Message ?? "OTP sent to your email.");
+    }
+
+    public async Task<ApiResult<Guid>> VerifyRegistrationOtpAsync(VerifyRegistrationOtpRequestModel request)
+    {
+        var httpResponse = await http.PostAsJsonAsync("api/auth/register/verify", request);
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errors = await ReadErrorMessagesAsync(httpResponse, "OTP verification failed. Please try again.");
             return ApiResult<Guid>.Fail(errors.FirstOrDefault() ?? "Error");
         }
 
         var result = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<Guid>>();
-        var msg = result?.Message ?? "Staff registered successfully.";
-        return ApiResult<Guid>.Ok(result?.Id ?? Guid.Empty, msg);
+        return ApiResult<Guid>.Ok(result?.Id ?? Guid.Empty, result?.Message ?? "Registration completed successfully.");
     }
 
     public async Task LogoutAsync()

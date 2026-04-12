@@ -32,8 +32,7 @@ public class StatisticsApiService(HttpClient http, ToastService toast)
         if (startDate.HasValue) { url += $"{sep}from={startDate.Value:yyyy-MM-dd}"; sep = '&'; }
         if (endDate.HasValue)   { url += $"{sep}to={endDate.Value:yyyy-MM-dd}";     sep = '&'; }
 
-        var result = await GetDirectAsync<T>(url, "Failed to fetch statistics.");
-        return ApiResult<T>.Ok(result.Data);
+        return (await GetAsync<T>(url, "Failed to fetch statistics."))!;
     }
 }
 

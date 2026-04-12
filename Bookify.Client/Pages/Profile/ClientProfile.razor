@@ -1,0 +1,237 @@
+@page "/client/profile"
+@using Bookify.Client.Models.Profile
+@using Bookify.Client.Models.Common
+@using Bookify.Client.Data
+@attribute [Authorize(Policy = "ClientOnly")]
+
+<PageTitle>My Profile — Bookify</PageTitle>
+
+<AuthorizeView Policy="ClientOnly" Context="clientContext">
+    <Authorized>
+        <!-- Ambient Background -->
+        <div class="fixed inset-0 -z-10 pointer-events-none">
+            <div class="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-emerald-50/30"></div>
+            <div class="absolute top-0 left-1/4 w-96 h-96 bg-green-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+            <!-- Page Header -->
+            <div class="mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider mb-3">
+                    <i class="fas fa-leaf text-[10px]"></i> Client Portal
+                </div>
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">My Profile</h1>
+                <p class="text-gray-500 mt-1">Manage your personal information and preferences.</p>
+            </div>
+
+            @if (_loading)
+            {
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="h-72 bg-white/60 rounded-3xl border border-gray-100 shadow-sm animate-pulse"></div>
+                    <div class="lg:col-span-2 h-96 bg-white/60 rounded-3xl border border-gray-100 shadow-sm animate-pulse"></div>
+                </div>
+            }
+            else if (_profile is null)
+            {
+                <div class="flex flex-col items-center justify-center py-24 bg-white/70 backdrop-blur rounded-3xl border border-gray-100 shadow">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-5">
+                        <i class="fas fa-user-slash text-3xl text-gray-400"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-1">Profile Unavailable</h2>
+                    <p class="text-gray-500 text-sm">Could not load your profile. Please refresh the page.</p>
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- ── Avatar / Info Card ── -->
+                    <div class="bg-white/80 backdrop-blur-xl rounded-3xl border border-gray-100 shadow-lg p-6 flex flex-col items-center text-center gap-4 relative overflow-hidden">
+                        <!-- Gradient accent -->
+                        <div class="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-green-500/10 to-transparent rounded-t-3xl pointer-events-none"></div>
+
+                        <!-- Avatar -->
+                        <div class="relative mt-2">
+                            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg ring-4 ring-white overflow-hidden group">
+                                @if (string.IsNullOrEmpty(_profile.ImagePath))
+                                {
+                                    <span class="text-white text-4xl font-black">@GetInitial()</span>
+                                }
+                                else
+                                {
+                                    <img src="@_profile.ImagePath" class="w-full h-full object-cover" alt="Profile" />
+                                }
+
+                                <label for="profileImg" class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                    <i class="fas fa-camera text-white text-lg"></i>
+                                    <span class="text-white text-[9px] font-bold uppercase tracking-wide mt-0.5">Change</span>
+                                    <InputFile id="profileImg" OnChange="HandleFileSelected" class="hidden" accept=".jpg,.jpeg,.png" />
+                                </label>
+                            </div>
+
+                            @if (_uploading)
+                            {
+                                <div class="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center">
+                                    <i class="fas fa-circle-notch animate-spin text-green-500 text-sm"></i>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Name / Email -->
+                        <div>
+                            <h2 class="text-lg font-extrabold text-gray-900">@_profile.FullName</h2>
+                            <p class="text-sm text-gray-500 mt-0.5 flex items-center justify-center gap-1.5">
+                                <i class="fas fa-envelope text-gray-400 text-xs"></i>
+                                @_profile.Email
+                            </p>
+                        </div>
+
+                        <div class="w-full h-px bg-gray-100"></div>
+
+                        <!-- Role Badge -->
+                        <div class="w-full px-4 py-2.5 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 text-green-700 text-sm font-bold flex items-center justify-center gap-2">
+                            <i class="fas fa-user text-green-500 text-xs"></i> Client Account
+                        </div>
+
+                        <!-- Info Chips -->
+                        @if (_profile.DateOfBirth.HasValue)
+                        {
+                            <div class="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl bg-gray-50 border border-gray-100 text-sm">
+                                <span class="text-gray-400 text-xs font-bold uppercase tracking-wide">Birthday</span>
+                                <span class="text-gray-700 font-semibold">@_profile.DateOfBirth.Value.ToString("MMM dd, yyyy")</span>
+                            </div>
+                        }
+
+                        @if (_profile.Gender.HasValue)
+                        {
+                            <div class="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl bg-gray-50 border border-gray-100 text-sm">
+                                <span class="text-gray-400 text-xs font-bold uppercase tracking-wide">Gender</span>
+                                <span class="text-gray-700 font-semibold">@GetGenderLabel(_profile.Gender.Value)</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- ── Edit Form ── -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white/80 backdrop-blur-xl rounded-3xl border border-gray-100 shadow-lg overflow-hidden">
+
+                            <!-- Card Header -->
+                            <div class="px-8 pt-7 pb-5 border-b border-gray-100 flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-2xl bg-green-100 flex items-center justify-center text-green-600 shadow-inner shrink-0">
+                                    <i class="fas fa-user-edit"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-base font-extrabold text-gray-900">Personal Details</h2>
+                                    <p class="text-xs text-gray-400 font-medium mt-0.5">Update your name, phone, and preferences.</p>
+                                </div>
+                            </div>
+
+                            <!-- Form Body -->
+                            <div class="p-8 space-y-5">
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <!-- Full Name -->
+                                    <div class="group">
+                                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Full Name</label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-4 flex items-center text-gray-400 group-focus-within:text-green-500 transition-colors pointer-events-none">
+                                                <i class="fas fa-id-card text-sm"></i>
+                                            </div>
+                                            <input type="text" @bind="_edit.FullName"
+                                                   class="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 outline-none transition-all text-gray-900 font-semibold text-sm placeholder-gray-300"
+                                                   placeholder="Your full name" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Phone Number -->
+                                    <div class="group">
+                                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Phone Number</label>
+                                        <div class="flex items-stretch gap-2">
+                                            <Bookify.Client.Components.UI.CountryPicker SelectedCountry="_selectedCountry" OnCountrySelected="HandleCountrySelected" />
+                                            <div class="relative flex-1 min-w-0">
+                                                <div class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
+                                                    <i class="fas fa-phone-alt text-sm"></i>
+                                                </div>
+                                                <input type="tel" @bind="_phoneNumber"
+                                                       class="w-full pl-9 pr-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 outline-none transition-all text-gray-900 font-semibold text-sm placeholder-gray-300"
+                                                       placeholder="Number" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Gender -->
+                                    <div class="group">
+                                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Gender</label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-4 flex items-center text-gray-400 group-focus-within:text-green-500 transition-colors pointer-events-none z-10">
+                                                <i class="fas fa-venus-mars text-sm"></i>
+                                            </div>
+                                            <select @bind="_genderValue"
+                                                    class="w-full pl-10 pr-9 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 outline-none transition-all text-gray-900 font-semibold text-sm appearance-none cursor-pointer">
+                                                <option value="0">Female</option>
+                                                <option value="1">Male</option>
+                                                <option value="2">Prefer not to say</option>
+                                            </select>
+                                            <div class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">
+                                                <i class="fas fa-chevron-down text-xs"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Date of Birth -->
+                                    <div class="group">
+                                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Date of Birth</label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-4 flex items-center text-gray-400 group-focus-within:text-green-500 transition-colors pointer-events-none">
+                                                <i class="fas fa-calendar-alt text-sm"></i>
+                                            </div>
+                                            <input type="date" @bind="_edit.DateOfBirth"
+                                                   class="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-green-400 focus:ring-2 focus:ring-green-400/20 outline-none transition-all text-gray-900 font-semibold text-sm" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Email (read-only) -->
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Email Address</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-4 flex items-center text-gray-400 pointer-events-none">
+                                            <i class="fas fa-envelope text-sm"></i>
+                                        </div>
+                                        <input type="email" value="@_profile.Email" readonly
+                                               class="w-full pl-10 pr-24 py-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-400 font-semibold text-sm cursor-not-allowed" />
+                                        <div class="absolute inset-y-0 right-3 flex items-center">
+                                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-200 px-2 py-1 rounded-md">Read Only</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Save Button -->
+                                <div class="pt-2 flex justify-end">
+                                    <button @onclick="SaveProfileAsync" disabled="@_saving"
+                                            class="inline-flex items-center gap-2 px-7 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm rounded-xl shadow-md shadow-green-500/25 hover:shadow-green-500/40 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                                        @if (_saving)
+                                        {
+                                            <i class="fas fa-circle-notch animate-spin"></i>
+                                            <span>Saving...</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-check"></i>
+                                            <span>Save Profile</span>
+                                        }
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            }
+
+        </div>
+    </Authorized>
+</AuthorizeView>

@@ -55,33 +55,46 @@ namespace Bookify.API.Controllers
             return HandleResult(result);
         }
 
-        /// <summary>Register a new client account.</summary>
-        /// <response code="200">Client registered — returns client ID.</response>
-        /// <response code="400">Identity validation errors.</response>
+        /// <summary>Initiate client registration — sends OTP to email.</summary>
+        /// <response code="200">OTP sent — returns true.</response>
+        /// <response code="400">Validation errors.</response>
         /// <response code="409">Email already registered.</response>
         [HttpPost("register/client")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(ServiceResponse<Guid>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ServiceResponse<bool>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> RegisterClient(RegisterClientRequest request)
         {
-            var result = await _authService.RegisterClientAsync(request);
+            var result = await _authService.InitiateRegisterClientAsync(request);
             return HandleResult(result);
         }
 
-        /// <summary>Register a new staff account.</summary>
-        /// <response code="200">Staff registered — returns staff ID.</response>
-        /// <response code="400">Identity validation errors.</response>
+        /// <summary>Initiate staff registration — sends OTP to email.</summary>
+        /// <response code="200">OTP sent — returns true.</response>
+        /// <response code="400">Validation errors.</response>
         /// <response code="409">Email already registered.</response>
         [HttpPost("register/staff")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(ServiceResponse<Guid>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ServiceResponse<bool>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> RegisterStaff(RegisterStaffRequest request)
         {
-            var result = await _authService.RegisterStaffAsync(request);
+            var result = await _authService.InitiateRegisterStaffAsync(request);
+            return HandleResult(result);
+        }
+
+        /// <summary>Verify OTP and complete registration — saves user record to database.</summary>
+        /// <response code="200">Registration completed — returns new user ID.</response>
+        /// <response code="400">Invalid or expired OTP.</response>
+        [HttpPost("register/verify")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ServiceResponse<Guid>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> VerifyRegistration(VerifyRegistrationOtpRequest request)
+        {
+            var result = await _authService.VerifyRegistrationOtpAsync(request);
             return HandleResult(result);
         }
 

@@ -1,5 +1,6 @@
 using Bookify.Client.Models;
 using Bookify.Client.Models.Profile;
+using Bookify.Client.Models.Common;
 using System.Net.Http.Json;
 
 namespace Bookify.Client.Services;
@@ -30,44 +31,35 @@ public class ProfileApiService(HttpClient http, ToastService toast)
     // ── Client ────────────────────────────────────────────────────────────
 
     public async Task<ApiResult<ClientProfileModel>> GetClientProfileAsync()
-    {
-        var result = await GetDirectAsync<ClientProfileModel>("api/profile/client", "Failed to load client profile.");
-        return ApiResult<ClientProfileModel>.Ok(result.Data!);
-    }
+        => (await GetAsync<ClientProfileModel>("api/profile/client", "Failed to load client profile."))!;
 
     public async Task<ApiResult<bool>> UpdateClientProfileAsync(UpdateClientProfileModel model)
         => await PutAsync("api/profile/client", model, "Failed to update client profile.");
 
     public async Task<ApiResult<bool>> ChangeClientPasswordAsync(ChangePasswordModel model)
-        => await PostAsync("api/profile/client/change-password", model, "Failed to change password.");
+        => await PostDirectAsync("api/profile/client/change-password", model, "Failed to change password.");
 
     // ── Staff ─────────────────────────────────────────────────────────────
 
     public async Task<ApiResult<StaffProfileModel>> GetStaffProfileAsync()
-    {
-        var result = await GetDirectAsync<StaffProfileModel>("api/profile/staff", "Failed to load staff profile.");
-        return ApiResult<StaffProfileModel>.Ok(result.Data!);
-    }
+        => (await GetAsync<StaffProfileModel>("api/profile/staff", "Failed to load staff profile."))!;
 
     public async Task<ApiResult<bool>> UpdateStaffProfileAsync(UpdateStaffProfileModel model)
         => await PutAsync("api/profile/staff", model, "Failed to update staff profile.");
 
     public async Task<ApiResult<bool>> ChangeStaffPasswordAsync(ChangePasswordModel model)
-        => await PostAsync("api/profile/staff/change-password", model, "Failed to change password.");
+        => await PostDirectAsync("api/profile/staff/change-password", model, "Failed to change password.");
 
     // ── Admin ─────────────────────────────────────────────────────────────
 
     public async Task<ApiResult<AdminProfileModel>> GetAdminProfileAsync()
-    {
-        var result = await GetDirectAsync<AdminProfileModel>("api/profile/admin", "Failed to load admin profile.");
-        return ApiResult<AdminProfileModel>.Ok(result.Data!);
-    }
+        => (await GetAsync<AdminProfileModel>("api/profile/admin", "Failed to load admin profile."))!;
 
     public async Task<ApiResult<bool>> UpdateAdminProfileAsync(UpdateAdminProfileModel model)
         => await PutAsync("api/profile/admin", model, "Failed to update admin profile.");
 
     public async Task<ApiResult<bool>> ChangeAdminPasswordAsync(ChangePasswordModel model)
-        => await PostAsync("api/profile/admin/change-password", model, "Failed to change password.");
+        => await PostDirectAsync("api/profile/admin/change-password", model, "Failed to change password.");
 
     // ── Upload ────────────────────────────────────────────────────────────
 
@@ -78,9 +70,9 @@ public class ProfileApiService(HttpClient http, ToastService toast)
         
         if (response.IsSuccessStatusCode)
         {
-            var result = await response.Content.ReadFromJsonAsync<ImageUploadResult>();
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>();
             ShowSuccess("Profile image updated successfully.");
-            return ApiResult<string>.Ok(result?.ImageUrl ?? string.Empty);
+            return ApiResult<string>.Ok(result?.Data ?? string.Empty);
         }
 
         var errors = await ReadErrorsAsync(response, "Failed to upload image.");
@@ -88,10 +80,5 @@ public class ProfileApiService(HttpClient http, ToastService toast)
         return ApiResult<string>.Fail(errors.FirstOrDefault() ?? "Error");
     }
 
-    private class ImageUploadResult
-    {
-        public string ImageUrl { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
-    }
 }
 

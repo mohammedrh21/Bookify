@@ -1,4 +1,4 @@
-
+using Bookify.Application.DTO.Users;
 
 namespace Bookify.Application.Interfaces.Staff
 {
@@ -8,5 +8,10 @@ namespace Bookify.Application.Interfaces.Staff
         Task UpdateAsync(Domain.Entities.Staff staff);
         Task AddAsync(Domain.Entities.Staff staff);
         Task<(IEnumerable<Domain.Entities.Staff> Items, int TotalCount)> GetStaffPaginatedAsync(int page, int pageSize);
+
+        // Admin Staff Members
+        Task<(IEnumerable<AdminStaffDto> Items, int TotalCount)> GetAdminStaffPaginatedAsync(
+            string? search, int page, int pageSize);
+        Task<AdminStaffDetailsDto?> GetAdminStaffDetailsAsync(Guid staffId);
     }
 }

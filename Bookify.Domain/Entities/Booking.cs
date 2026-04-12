@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Enums;
+using Bookify.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 
@@ -31,5 +31,11 @@ namespace Bookify.Domain.Entities
         public TimeSpan Time { get; set; }
 
         public BookingStatus Status { get; set; } = BookingStatus.Pending;
+
+        // One-to-One: Booking → Payment
+        public Payment? Payment { get; set; }
+
+        // One-to-One: Booking → Review
+        public Review? Review { get; set; }
     }
 }

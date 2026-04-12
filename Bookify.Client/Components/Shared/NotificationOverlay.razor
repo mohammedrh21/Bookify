@@ -1,0 +1,338 @@
+@using Bookify.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject INotificationApiService NotificationApiService
+@inject NotificationStateService StateService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
+
+@if (StateService.IsOpen)
+{
+    <!-- Backdrop with higher z-index -->
+    <div class="fixed inset-0 z-[990] bg-black/5 backdrop-blur-[1px]" @onclick="Close"></div>
+
+    <!-- Panel Container -->
+    <div class="@(StateService.Mode == NotificationPanelMode.Sidebar 
+                 ? "fixed left-72 top-6 slide-in-from-left" 
+                 : "fixed right-6 top-[4.5rem] slide-in-from-top-4")
+                w-[360px] max-h-[calc(100vh-4rem)] shadow-[0_20px_60px_rgba(0,0,0,0.12)] 
+                bg-white rounded-[2rem] border border-gray-100/60
+                overflow-hidden flex flex-col z-[1000] backdrop-blur-2xl bg-white/95
+                animate-in duration-500 cubic-bezier(0.16, 1, 0.3, 1)">
+
+        <!-- Header -->
+        <div class="px-6 py-5 border-b border-gray-100/80 bg-gray-50/40 shrink-0">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-primary-600 rounded-xl shadow-md shadow-primary-600/20">
+                        <i class="fas fa-bell text-white text-[11px]"></i>
+                    </div>
+                    <h3 class="text-base font-black text-gray-900 tracking-tight leading-none">Notifications</h3>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button @onclick="() => Refresh()" class="p-1.5 hover:bg-gray-200/50 rounded-full transition-all text-gray-400 hover:text-primary-600" title="Refresh">
+                        <i class="fas fa-sync-alt text-[12px] @(_loading ? "animate-spin" : "")"></i>
+                    </button>
+                    <button @onclick="Close" class="p-1.5 hover:bg-gray-200/50 rounded-full transition-colors text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-[13px]"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Global Activity Feed</span>
+                
+                @if (_notifications != null && _notifications.Any(n => !n.IsRead))
+                {
+                    <button @onclick="MarkAllAsSeen"
+                            class="text-[10px] font-black text-primary-600 hover:text-primary-700
+                                   hover:bg-primary-50 px-3 py-1.5 rounded-lg transition-all active:scale-95 flex items-center gap-1.5">
+                        <i class="fas fa-check-double text-[9px]"></i>
+                        Mark all seen
+                    </button>
+                }
+            </div>
+        </div>
+
+        <!-- Notification List Container -->
+        <div class="flex-1 overflow-hidden relative min-h-[300px]">
+            <div class="absolute inset-0 overflow-y-auto custom-scrollbar px-3 py-3 space-y-1.5">
+                @if (_loading)
+                {
+                    <div class="flex flex-col items-center justify-center py-24 gap-4">
+                        <div class="relative w-8 h-8">
+                            <div class="absolute inset-0 border-2 border-primary-100 rounded-full"></div>
+                            <div class="absolute inset-0 border-2 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+                        </div>
+                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">Fetching updates...</p>
+                    </div>
+                }
+                else if (_notifications == null || !_notifications.Any())
+                {
+                    <div class="flex flex-col items-center justify-center py-24 text-center px-8">
+                        <div class="w-16 h-16 bg-gray-50 rounded-[1.5rem] flex items-center justify-center mb-6">
+                            <i class="fas fa-bell-slash text-gray-200 text-2xl"></i>
+                        </div>
+                        <p class="text-sm font-black text-gray-900 leading-tight">Quiet day!</p>
+                        <p class="text-[11px] font-medium text-gray-500 mt-1.5">You have no new notifications.</p>
+                        <button @onclick="() => Refresh()" class="mt-4 text-[10px] font-black text-primary-600 hover:underline">TRY REFRESH</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="px-1">
+                        @foreach (var notification in _notifications)
+                        {
+                            <div @onclick="() => HandleNotificationClick(notification)"
+                                 class="relative w-full group cursor-pointer p-3.5 flex items-start gap-3.5
+                                        rounded-[1.25rem] transition-all duration-300 mb-1.5 border border-transparent
+                                        @(notification.IsRead 
+                                            ? "bg-white hover:bg-gray-50/80 hover:border-gray-100" 
+                                            : "bg-primary-50/40 hover:bg-primary-50 border-primary-100 shadow-[0_2px_10px_rgba(59,130,246,0.03)]")">
+                                    
+                                @if (!notification.IsRead)
+                                {
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary-600 rounded-r-full"></div>
+                                }
+
+                                <!-- Icon Wrapper -->
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-sm
+                                            @GetTypeStyle(notification.Type) @(notification.IsRead ? "grayscale-[0.5] opacity-50" : "shadow-md")">
+                                    <i class="@GetTypeIcon(notification.Type) text-sm"></i>
+                                </div>
+
+                                <!-- Content -->
+                                <div class="flex-1 min-w-0 pr-3 text-left">
+                                    <p class="text-[13px] font-extrabold tracking-tight leading-tight transition-colors truncate
+                                            @(notification.IsRead ? "text-gray-500" : "text-gray-900 group-hover:text-primary-800")">
+                                        @notification.Title
+                                    </p>
+                                    <p class="text-[11px] font-medium text-gray-500 leading-tight mt-1 line-clamp-2">@notification.Message</p>
+                                    
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-gray-100/80 px-2 py-0.5 rounded-md">
+                                            @FormatRelativeTime(notification.CreatedAt)
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Delete Button -->
+                                <button @onclick:stopPropagation="true"
+                                        @onclick="() => DeleteNotification(notification.Id)"
+                                        class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 
+                                               rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                                    <i class="fas fa-trash-alt text-[10px]"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_hasMore)
+                    {
+                        <div class="mt-4 mb-4 flex justify-center px-4">
+                            <button @onclick="LoadMore" disabled="@_loadingMore"
+                                    class="w-full group py-3 bg-gray-900 hover:bg-primary-600
+                                           text-white text-[10px] font-black rounded-xl transition-all 
+                                           shadow-lg shadow-gray-900/10 hover:shadow-primary-600/30
+                                           disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2">
+                                @if (_loadingMore)
+                                {
+                                    <div class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                }
+                                <span class="tracking-[0.1em]">LOAD MORE</span>
+                                <i class="fas fa-chevron-down text-[8px] group-hover:translate-y-0.5 transition-transform"></i>
+                            </button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50/50 border-t border-gray-100 shrink-0 text-center">
+            <p class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] opacity-80">Bookify Real-time Service</p>
+        </div>
+    </div>
+}
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f9fafb;
+        border-radius: 10px;
+        margin: 8px 0;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e5e7eb;
+        border: 2px solid #f9fafb;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #d1d5db;
+    }
+
+    @@keyframes slideInFromLeft {
+        from { transform: translateX(-15%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @@keyframes slideInFromTop {
+        from { transform: translateY(-10%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .slide-in-from-left {
+        animation: slideInFromLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .slide-in-from-top-4 {
+        animation: slideInFromTop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+</style>
+
+@code {
+    private List<Bookify.Client.Models.Notification.NotificationModel>? _notifications;
+    private bool _loading = false;
+    private bool _loadingMore = false;
+    private int _currentPage = 1;
+    private const int PageSize = 5;
+    private bool _hasMore = true;
+
+    protected override void OnInitialized()
+    {
+        StateService.OnChange += HandleStateChange;
+    }
+
+    private async void HandleStateChange()
+    {
+        await InvokeAsync(async () => {
+            if (StateService.IsOpen)
+            {
+                await Refresh();
+            }
+            else
+            {
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task Refresh()
+    {
+        _currentPage = 1;
+        _notifications = null;
+        _hasMore = true;
+        await FetchNotifications();
+    }
+
+    private async Task FetchNotifications()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated != true) return;
+
+            if (_currentPage == 1) _loading = true;
+            else _loadingMore = true;
+            StateHasChanged();
+
+            var result = await NotificationApiService.GetNotificationsAsync(pageNumber: _currentPage, pageSize: PageSize);
+            if (result.Success && result.Data != null)
+            {
+                var newData = result.Data.ToList();
+                if (_notifications == null) _notifications = newData;
+                else _notifications.AddRange(newData);
+                _hasMore = newData.Count == PageSize;
+            }
+            else _hasMore = false;
+        }
+        catch { _hasMore = false; }
+        finally
+        {
+            _loading = false;
+            _loadingMore = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMore()
+    {
+        if (_loadingMore || !_hasMore) return;
+        _currentPage++;
+        await FetchNotifications();
+    }
+
+    private async Task MarkAllAsSeen()
+    {
+        var result = await NotificationApiService.MarkAllAsReadAsync();
+        if (result.Success && _notifications != null)
+        {
+            foreach (var n in _notifications) n.IsRead = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleNotificationClick(Bookify.Client.Models.Notification.NotificationModel notification)
+    {
+        if (!notification.IsRead)
+        {
+            await NotificationApiService.MarkAsReadAsync(new List<Guid> { notification.Id });
+            notification.IsRead = true;
+        }
+        if (!string.IsNullOrEmpty(notification.RedirectUrl))
+            Nav.NavigateTo(notification.RedirectUrl);
+        
+        Close();
+    }
+
+    private async Task DeleteNotification(Guid id)
+    {
+        var result = await NotificationApiService.DeleteNotificationAsync(id);
+        if (result.Success && _notifications != null)
+        {
+            var item = _notifications.FirstOrDefault(x => x.Id == id);
+            if (item != null) _notifications.Remove(item);
+            StateHasChanged();
+        }
+    }
+
+    private void Close() => StateService.Close();
+
+    private string GetTypeIcon(string type) => type switch
+    {
+        "NewBooking" => "fas fa-calendar-plus",
+        "BookingStatusChanged" => "fas fa-sync-alt",
+        "ServiceDeleted" => "fas fa-exclamation-triangle",
+        "ServiceApproved" => "fas fa-check-double",
+        "ServiceRejected" => "fas fa-times-circle",
+        "NewReview" => "fas fa-comment-dots",
+        _ => "fas fa-bell"
+    };
+
+    private string GetTypeStyle(string type) => type switch
+    {
+        "NewBooking" => "bg-blue-100 text-blue-600",
+        "BookingStatusChanged" => "bg-amber-100 text-amber-600",
+        "ServiceDeleted" => "bg-rose-100 text-rose-600",
+        "ServiceApproved" => "bg-emerald-100 text-emerald-600",
+        "ServiceRejected" => "bg-red-100 text-red-600",
+        "NewReview" => "bg-indigo-100 text-indigo-600",
+        _ => "bg-gray-100 text-gray-600"
+    };
+
+    private string FormatRelativeTime(DateTime createdAt)
+    {
+        var diff = DateTime.UtcNow - createdAt;
+        if (diff.TotalMinutes < 1) return "Just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return createdAt.ToString("MMM dd");
+    }
+
+    public void Dispose()
+    {
+        StateService.OnChange -= HandleStateChange;
+    }
+}

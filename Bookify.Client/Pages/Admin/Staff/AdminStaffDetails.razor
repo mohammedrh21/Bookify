@@ -1,0 +1,216 @@
+@page "/admin/staff-members/{StaffId:guid}"
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Staff Profile — Bookify Admin</PageTitle>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <button @onclick="NavigateBack"
+            class="mb-6 inline-flex items-center text-sm font-medium text-gray-500 hover:text-primary-600 transition-colors">
+        <i class="fa-solid fa-arrow-left mr-2"></i>
+        Back to Staff List
+    </button>
+
+    @if (_loading)
+    {
+        <LoadingSpinner Message="Loading staff profile..." />
+    }
+    else if (_details == null)
+    {
+        <EmptyState Icon="⚠️" Title="Staff Not Found"
+                    Message="This staff member could not be found or you don't have permission to view them." />
+    }
+    else
+    {
+        @* ── Header Profile Card ──────────────────────────────────────────── *@
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8 mb-6 flex flex-col sm:flex-row items-center gap-6">
+            @* Photo *@
+            @if (!string.IsNullOrEmpty(_details.ImagePath))
+            {
+                <img src="@_details.ImagePath"
+                     class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md ring-1 ring-gray-100"
+                     alt="@_details.FullName" />
+            }
+            else
+            {
+                <div class="w-24 h-24 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-3xl shadow-md border-4 border-white ring-1 ring-gray-100">
+                    @GetInitials(_details.FullName)
+                </div>
+            }
+
+            @* Info *@
+            <div class="flex-1 text-center sm:text-left">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-2 justify-center sm:justify-start">
+                    <h1 class="text-3xl font-bold text-gray-900">@_details.FullName</h1>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold @(_details.IsActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
+                        @(_details.IsActive ? "Active" : "Inactive")
+                    </span>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center sm:justify-start text-gray-600">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-envelope text-gray-400"></i>
+                        <span>@_details.Email</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(_details.Phone))
+                    {
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-phone text-gray-400"></i>
+                            <span>@_details.Phone</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* Actions *@
+            <div class="flex flex-col gap-2 w-full sm:w-auto">
+                <button @onclick="ToggleActive"
+                        class="px-5 py-2.5 rounded-xl shadow-sm font-semibold transition-transform active:scale-95 flex items-center justify-center gap-2 @(_details.IsActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100")">
+                    <i class="fa-solid @(_details.IsActive ? "fa-ban" : "fa-check")"></i>
+                    @(_details.IsActive ? "Deactivate" : "Activate")
+                </button>
+                <button @onclick="MessageStaff"
+                        class="px-5 py-2.5 bg-primary-600 text-white rounded-xl shadow-md font-semibold hover:bg-primary-700 transition-transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    Message Staff
+                </button>
+            </div>
+        </div>
+
+        @* ── Service Card ─────────────────────────────────────────────────── *@
+        @if (_details.ServiceId.HasValue)
+        {
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Service Information</h2>
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-50 text-primary-600">
+                                <i class="fa-solid fa-briefcase"></i>
+                            </span>
+                            <div>
+                                <p class="text-lg font-bold text-gray-900">@_details.ServiceName</p>
+                                <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">@_details.CategoryName</p>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(_details.ServiceDescription))
+                        {
+                            <p class="text-sm text-gray-600 mt-2 leading-relaxed">@_details.ServiceDescription</p>
+                        }
+                        <div class="flex flex-wrap gap-4 mt-4">
+                            <div class="flex items-center gap-2 text-sm text-gray-700">
+                                <i class="fa-solid fa-dollar-sign text-emerald-500"></i>
+                                <span class="font-semibold">$@_details.ServicePrice.ToString("F2")</span>
+                                <span class="text-gray-400">per session</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-sm text-gray-700">
+                                <i class="fa-solid fa-star text-amber-400"></i>
+                                <span class="font-semibold">@_details.Rating.ToString("F1")</span>
+                                <span class="text-gray-400">(@_details.ReviewCount reviews)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="/services/@_details.ServiceId"
+                       class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl font-semibold text-sm hover:bg-primary-700 transition-colors shadow-sm">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        View Service
+                    </a>
+                </div>
+            </div>
+        }
+
+        @* ── Statistics Grid ──────────────────────────────────────────────── *@
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Performance Overview</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
+                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-calendar-check text-lg"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">@_details.TotalBookings</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mt-1">Total</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
+                <div class="w-10 h-10 rounded-full bg-green-50 text-green-500 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-check-double text-lg"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">@_details.CompletedBookings</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mt-1">Completed</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
+                <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-clock-rotate-left text-lg"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">@_details.UpcomingBookings</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mt-1">Upcoming</p>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
+                <div class="w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-ban text-lg"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">@_details.CancelledBookings</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mt-1">Cancelled</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-gray-900 to-gray-800 p-5 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center">
+                <div class="w-10 h-10 rounded-full bg-white/10 text-emerald-400 flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-dollar-sign text-lg"></i>
+                </div>
+                <p class="text-3xl font-bold text-white">$@_details.TotalRevenue.ToString("F0")</p>
+                <p class="text-xs text-gray-300 uppercase tracking-wider font-semibold mt-1">Revenue</p>
+            </div>
+        </div>
+
+        @* ── Booking History Table ─────────────────────────────────────────── *@
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Latest Bookings</h2>
+        @if (!_details.Bookings.Any())
+        {
+            <div class="bg-white rounded-2xl p-8 text-center text-gray-500 border border-gray-100 shadow-sm">
+                No booking history found for this staff member.
+            </div>
+        }
+        else
+        {
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-100 text-gray-500 text-sm font-medium uppercase tracking-wider">
+                                <th class="px-6 py-4">Client</th>
+                                <th class="px-6 py-4">Date</th>
+                                <th class="px-6 py-4">Price</th>
+                                <th class="px-6 py-4">Payment</th>
+                                <th class="px-6 py-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach (var booking in _details.Bookings)
+                            {
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-6 py-4 font-semibold text-gray-900">
+                                        @booking.ClientName
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium text-gray-900">@booking.Date.ToString("MMM dd, yyyy")</div>
+                                        <div class="text-xs text-gray-500">@booking.Date.ToString("hh:mm tt")</div>
+                                    </td>
+                                    <td class="px-6 py-4 font-medium text-gray-900">
+                                        $@booking.Price.ToString("F2")
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="@GetPaymentBadgeClass(booking.PaymentStatus)">
+                                            @booking.PaymentStatus
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <StatusBadge Status="@booking.Status" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</div>

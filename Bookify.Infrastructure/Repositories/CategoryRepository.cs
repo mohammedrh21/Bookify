@@ -1,4 +1,4 @@
-﻿using Bookify.Domain.Contracts.Category;
+using Bookify.Domain.Contracts.Category;
 using Bookify.Domain.Entities;
 using Bookify.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -13,12 +13,18 @@ namespace Bookify.Infrastructure.Repositories
             _db = db;
         }
 
-        public async Task<IEnumerable<Category>> GetAllAsync()
-            => await _db.Categories
+        public async Task<IEnumerable<Category>> GetAllAsync(int? limit = null)
+        {
+            var query = _db.Categories
                 .Include(c => c.Services)
                 .Where(x => x.IsActive)
-                .AsNoTracking()
-                .ToListAsync();
+                .AsNoTracking();
+
+            if (limit.HasValue)
+                query = query.Take(limit.Value);
+
+            return await query.ToListAsync();
+        }
 
         public async Task AddAsync(Category category)
             => await _db.AddAsync(category);

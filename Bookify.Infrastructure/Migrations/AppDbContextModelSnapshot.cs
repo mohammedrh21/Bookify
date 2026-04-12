@@ -22,28 +22,6 @@ namespace Bookify.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Bookify.Domain.Entities.Admin", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Admins");
-                });
-
             modelBuilder.Entity("Bookify.Domain.Entities.Booking", b =>
                 {
                     b.Property<Guid>("Id")
@@ -90,37 +68,6 @@ namespace Bookify.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Categories");
-                });
-
-            modelBuilder.Entity("Bookify.Domain.Entities.Client", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Gender")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ImagePath")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Clients");
                 });
 
             modelBuilder.Entity("Bookify.Domain.Entities.ContactInfo", b =>
@@ -183,6 +130,49 @@ namespace Bookify.Infrastructure.Migrations
                     b.ToTable("FAQs");
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RedirectUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("IX_Notifications_UserId_CreatedAt");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.Payment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -217,7 +207,9 @@ namespace Bookify.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
+                    b.HasIndex("BookingId")
+                        .IsUnique()
+                        .HasFilter("[BookingId] IS NOT NULL");
 
                     b.HasIndex("ClientId");
 
@@ -286,7 +278,8 @@ namespace Bookify.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
+                    b.HasIndex("BookingId")
+                        .IsUnique();
 
                     b.HasIndex("ClientId");
 
@@ -401,34 +394,6 @@ namespace Bookify.Infrastructure.Migrations
                     b.ToTable("ServiceApprovalRequests");
                 });
 
-            modelBuilder.Entity("Bookify.Domain.Entities.Staff", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Gender")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ImagePath")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Staffs");
-                });
-
             modelBuilder.Entity("Bookify.Domain.Entities.SupportTicket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -458,6 +423,38 @@ namespace Bookify.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SupportTickets");
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Entities.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Discriminator")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("User");
+
+                    b.HasDiscriminator<string>("Discriminator").HasValue("User");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bookify.Infrastructure.Identity.Entity.ApplicationIdentityUser", b =>
@@ -670,6 +667,51 @@ namespace Bookify.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.Admin", b =>
+                {
+                    b.HasBaseType("Bookify.Domain.Entities.User");
+
+                    b.HasDiscriminator().HasValue("Admin");
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Entities.Client", b =>
+                {
+                    b.HasBaseType("Bookify.Domain.Entities.User");
+
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Gender")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImagePath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.ToTable("User", t =>
+                        {
+                            t.Property("Gender")
+                                .HasColumnName("Client_Gender");
+
+                            t.Property("ImagePath")
+                                .HasColumnName("Client_ImagePath");
+                        });
+
+                    b.HasDiscriminator().HasValue("Client");
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Entities.Staff", b =>
+                {
+                    b.HasBaseType("Bookify.Domain.Entities.User");
+
+                    b.Property<int>("Gender")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImagePath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasDiscriminator().HasValue("Staff");
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.Booking", b =>
                 {
                     b.HasOne("Bookify.Domain.Entities.Client", "Client")
@@ -689,11 +731,22 @@ namespace Bookify.Infrastructure.Migrations
                     b.Navigation("Service");
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("Bookify.Domain.Entities.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.Payment", b =>
                 {
                     b.HasOne("Bookify.Domain.Entities.Booking", "Booking")
-                        .WithMany()
-                        .HasForeignKey("BookingId")
+                        .WithOne("Payment")
+                        .HasForeignKey("Bookify.Domain.Entities.Payment", "BookingId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Bookify.Domain.Entities.Client", "Client")
@@ -718,8 +771,8 @@ namespace Bookify.Infrastructure.Migrations
             modelBuilder.Entity("Bookify.Domain.Entities.Review", b =>
                 {
                     b.HasOne("Bookify.Domain.Entities.Booking", "Booking")
-                        .WithMany()
-                        .HasForeignKey("BookingId")
+                        .WithOne("Review")
+                        .HasForeignKey("Bookify.Domain.Entities.Review", "BookingId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -837,14 +890,16 @@ namespace Bookify.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.Booking", b =>
+                {
+                    b.Navigation("Payment");
+
+                    b.Navigation("Review");
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Services");
-                });
-
-            modelBuilder.Entity("Bookify.Domain.Entities.Client", b =>
-                {
-                    b.Navigation("Bookings");
                 });
 
             modelBuilder.Entity("Bookify.Domain.Entities.Service", b =>
@@ -852,6 +907,16 @@ namespace Bookify.Infrastructure.Migrations
                     b.Navigation("Bookings");
 
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Entities.User", b =>
+                {
+                    b.Navigation("Notifications");
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Entities.Client", b =>
+                {
+                    b.Navigation("Bookings");
                 });
 
             modelBuilder.Entity("Bookify.Domain.Entities.Staff", b =>

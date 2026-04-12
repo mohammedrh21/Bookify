@@ -16,7 +16,11 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
     protected readonly HttpClient Http = http;
     protected readonly ToastService Toast = toast;
 
-    /// <summary>Shows all errors as individual error toasts.</summary>
+    /// <summary>
+    /// Shows all errors as individual error toasts.
+    /// For FluentValidation responses this means one toast per field error;
+    /// for plain message responses this means a single toast.
+    /// </summary>
     protected void ShowErrors(List<string> errors)
     {
         foreach (var error in errors)
@@ -34,6 +38,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<TResponse?>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>();
@@ -46,6 +51,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<TResponse?>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<TResponse>();
@@ -58,6 +64,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
@@ -71,11 +78,26 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<TResponse>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>();
         var msg = result?.Message ?? "Operation successful.";
         return ApiResult<TResponse>.Ok(result != null ? result.Data : default!, msg);
+    }
+
+    protected async Task<ApiResult<bool>> PostDirectAsync<TRequest>(string url, TRequest request, string fallbackError)
+    {
+        var response = await Http.PostAsJsonAsync(url, request);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
+            return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
+        }
+        var content = await response.Content.ReadAsStringAsync();
+        bool.TryParse(content, out var result);
+        return ApiResult<bool>.Ok(result, "Password updated successfully.");
     }
 
     protected async Task<ApiResult<string>> PostMultipartAsync(string url, MultipartFormDataContent request, string fallbackError)
@@ -84,6 +106,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<string>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>();
@@ -96,6 +119,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
@@ -109,6 +133,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<TResponse>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<TResponse>>();
@@ -122,6 +147,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
@@ -135,6 +161,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         if (!response.IsSuccessStatusCode)
         {
             var errors = await ReadErrorsAsync(response, fallbackError);
+            ShowErrors(errors);
             return ApiResult<bool>.Fail(errors.FirstOrDefault() ?? "Error");
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
@@ -146,7 +173,9 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
 
     /// <summary>
     /// Parses error messages from a failed HTTP response.
-    /// Supports RFC 9110 validation-errors object and a plain "message" property.
+    /// - If the response has an "errors" dictionary (FluentValidation / ValidationError),
+    ///   every individual field error message is returned as a separate string.
+    /// - Otherwise falls back to the top-level "message" property, or the fallback string.
     /// </summary>
     protected static async Task<List<string>> ReadErrorsAsync(
         HttpResponseMessage response,
@@ -157,7 +186,7 @@ public abstract class BaseApiService(HttpClient http, ToastService toast)
         {
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-            // 1. RFC 9110 validation-errors dict: { "errors": { "Field": ["msg"] } }
+            // 1. FluentValidation / RFC 9110 errors dict: { "errors": { "field": ["msg1", "msg2"] } }
             if (json.TryGetProperty("errors", out var errorsDict)
                 && errorsDict.ValueKind == JsonValueKind.Object)
             {

@@ -7,7 +7,7 @@ namespace Bookify.Client.Services;
 // ── Interface ────────────────────────────────────────────────────────────────
 public interface ICategoryService
 {
-    Task<ApiResult<List<CategoryModel>>>  GetAllAsync();
+    Task<ApiResult<List<CategoryModel>>>  GetAllAsync(int? limit = null);
     Task<ApiResult<CategoryModel?>>       GetByIdAsync(Guid id);
     Task<ApiResult<bool>>                 CreateAsync(CategoryModel model);
     Task<ApiResult<bool>>                 DeactivateAsync(Guid id);
@@ -19,9 +19,10 @@ public class CategoryService(HttpClient http, ToastService toast)
 {
     // ── Queries ──────────────────────────────────────────────────────────
 
-    public async Task<ApiResult<List<CategoryModel>>> GetAllAsync()
+    public async Task<ApiResult<List<CategoryModel>>> GetAllAsync(int? limit = null)
     {
-        var result = await GetAsync<List<CategoryModel>>("api/categories", "Failed to load categories.");
+        var url = limit.HasValue ? $"api/categories?limit={limit.Value}" : "api/categories";
+        var result = await GetAsync<List<CategoryModel>>(url, "Failed to load categories.");
         return ApiResult<List<CategoryModel>>.Ok(result.Data ?? []);
     }
 

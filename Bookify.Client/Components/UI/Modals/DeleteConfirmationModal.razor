@@ -1,47 +1,158 @@
-<div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 animate-in fade-in duration-200">
-    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 transform animate-in zoom-in duration-200">
+@implements IDisposable
+@using System.Threading
 
-        <h3 class="text-xl font-bold text-center text-gray-900 mb-4">
-            @Title
-        </h3>
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[9999] animate-in fade-in duration-500 overflow-y-auto px-4 py-6">
+    @* Modal Container with Glassmorphism *@
+    <div class="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-[3rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] p-12 border border-white/50 relative overflow-hidden transform animate-in slide-in-from-bottom-8 duration-500 transition-all">
+        
+        @* Animated Progress Bar (Top) *@
+        <div class="absolute top-0 left-0 w-full h-2 bg-slate-100/50">
+            <div class="h-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-100 ease-linear shadow-[0_0_12px_rgba(244,63,94,0.4)]" 
+                 style="width: @(CalculateSmoothProgress())%"></div>
+        </div>
 
-        @if (!string.IsNullOrEmpty(Message))
-        {
-            <p class="text-sm text-gray-500 text-center mb-4 leading-relaxed">
-                @Message
-            </p>
-        }
-
-        @if (Countdown > 0)
-        {
-            <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 text-center">
-                <p class="text-red-600 font-semibold text-sm">
-                    Please wait <span class="font-bold">@Countdown</span> seconds to confirm...
-                </p>
+        @* Visual Identity Section *@
+        <div class="flex flex-col items-center mb-8">
+            <div class="relative mb-6">
+                @* Multi-layer pulsing effect *@
+                <div class="absolute inset-0 bg-red-400 rounded-[2rem] animate-ping opacity-20 duration-1000"></div>
+                <div class="absolute inset-0 bg-red-500/10 rounded-[2rem] scale-125 animate-pulse duration-700"></div>
+                
+                <div class="w-24 h-24 bg-gradient-to-br from-red-50 to-rose-100 rounded-[2rem] flex items-center justify-center text-red-500 border border-red-200/50 shadow-inner relative z-10 group transition-transform hover:scale-105 duration-300">
+                    <i class="fas fa-exclamation-triangle text-4xl transform group-hover:rotate-12 transition-transform duration-300"></i>
+                </div>
             </div>
-        }
 
-        <div class="flex justify-center gap-4 mt-6">
-            <button @onclick="() => OnCancel.InvokeAsync()"
-                    class="px-5 py-2.5 border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition">
+            <h3 class="text-3xl font-black text-slate-900 mb-3 tracking-tight text-center leading-tight">
+                @Title
+            </h3>
+            
+            <div class="w-12 h-1 bg-red-100 rounded-full mb-4"></div>
+
+            @if (!string.IsNullOrEmpty(Message))
+            {
+                <p class="text-slate-500 text-center text-lg leading-relaxed px-2 font-medium">
+                    @Message
+                </p>
+            }
+        </div>
+
+        @* Action Buttons Grid *@
+        <div class="grid grid-cols-2 gap-5 pt-4">
+            <button @onclick="CancelAsync"
+                    class="h-16 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-200 hover:text-slate-800 transition-all duration-300 flex items-center justify-center group active:scale-95">
+                <i class="fas fa-times mr-2 text-slate-400 group-hover:text-slate-600"></i>
                 Cancel
             </button>
 
-            <button @onclick="() => OnConfirm.InvokeAsync()"
-                    disabled="@(Countdown > 0)"
-                    class="px-6 py-2.5 rounded-xl text-white font-semibold shadow-lg transition-all 
-                           @(Countdown > 0 ? "bg-red-300 cursor-not-allowed shadow-none" : "bg-red-600 hover:bg-red-700 shadow-red-500/20")">
-                Confirm Delete
+            <button @onclick="ConfirmAsync"
+                    disabled="@(_remainingMs > 0)"
+                    class="h-16 rounded-2xl text-white font-bold shadow-2xl transition-all duration-500 relative overflow-hidden group active:scale-95
+                           @(_remainingMs > 0 ? "bg-slate-200 cursor-not-allowed shadow-none" : "bg-gradient-to-br from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 hover:shadow-red-500/40")">
+                
+                <span class="relative z-10 flex items-center justify-center gap-2">
+                    @if (_remainingMs > 0)
+                    {
+                        <span class="text-slate-400 tabular-nums">@Math.Ceiling(_remainingMs / 1000.0)s</span>
+                    }
+                    else
+                    {
+                        <i class="fas fa-trash-alt text-sm group-hover:animate-bounce"></i>
+                        <span>Confirm</span>
+                    }
+                </span>
+
+                @* Loading shimmer during disabled state *@
+                @if (_remainingMs > 0)
+                {
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+                }
             </button>
+        </div>
+
+        @* Footer Status Line *@
+        <div class="mt-8 flex items-center justify-center gap-2">
+            <div class="flex gap-1">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="w-1.5 h-1.5 rounded-full @(i < (5 - Math.Ceiling(_remainingMs / 1000.0)) ? "bg-red-400" : "bg-slate-200") transition-colors duration-500"></div>
+                }
+            </div>
+            <p class="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] animate-pulse">
+                @(_remainingMs > 0 ? "System Security Locked" : "Protocol Verified")
+            </p>
         </div>
     </div>
 </div>
 
+<style>
+    @@keyframes shimmer {
+        100% { transform: translateX(100%); }
+    }
+</style>
+
 @code {
     [Parameter] public string Title { get; set; } = "Are you sure?";
-    [Parameter] public string Message { get; set; } = "";
-    [Parameter] public int Countdown { get; set; } = 0;
+    [Parameter] public string Message { get; set; } = "This destructive operation cannot be undone.";
+    [Parameter] public int CountdownSeconds { get; set; } = 5;
 
     [Parameter] public EventCallback OnConfirm { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    private double _remainingMs;
+    private double _totalMs;
+    private CancellationTokenSource? _cts;
+
+    protected override void OnInitialized()
+    {
+        _totalMs = CountdownSeconds * 1000.0;
+        _remainingMs = _totalMs;
+        StartCountdown();
+    }
+
+    private void StartCountdown()
+    {
+        if (_remainingMs <= 0) return;
+
+        _cts = new CancellationTokenSource();
+        _ = Task.Run(async () =>
+        {
+            const int tickMs = 50; // Update every 50ms for smooth progress bar
+            try
+            {
+                while (_remainingMs > 0 && !_cts.IsCancellationRequested)
+                {
+                    await Task.Delay(tickMs, _cts.Token);
+                    _remainingMs = Math.Max(0, _remainingMs - tickMs);
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (TaskCanceledException) { }
+            catch (ObjectDisposedException) { }
+        });
+    }
+
+    private double CalculateSmoothProgress()
+    {
+        if (_totalMs <= 0) return 100;
+        return (double)(_totalMs - _remainingMs) / _totalMs * 100;
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (_remainingMs > 0) return;
+        await OnConfirm.InvokeAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        _cts?.Cancel();
+        await OnCancel.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
 }

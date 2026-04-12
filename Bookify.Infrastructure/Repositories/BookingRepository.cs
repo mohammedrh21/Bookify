@@ -31,6 +31,8 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(b => b.Service)
                     .ThenInclude(s => s.Category)
                 .Include(b => b.Client)
+                .Include(b => b.Payment)
+                .Include(b => b.Review)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
         public async Task<IEnumerable<Booking>> GetByClientIdAsync(Guid clientId, int skip = 0, int take = 10)
@@ -40,6 +42,8 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(b => b.Service)
                     .ThenInclude(s => s.Category)
                 .Include(b => b.Client)
+                .Include(b => b.Payment)
+                .Include(b => b.Review)
                 .Where(b => b.ClientId == clientId)
                 .OrderByDescending(b => b.Date)
                 .Skip(skip)
@@ -54,6 +58,8 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(b => b.Service)
                     .ThenInclude(s => s.Category)
                 .Include(b => b.Client)
+                .Include(b => b.Payment)
+                .Include(b => b.Review)
                 .Where(b => b.Service.StaffId == staffId)
                 .OrderByDescending(b => b.Date)
                 .Skip(skip)
@@ -77,6 +83,8 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(b => b.Service)
                     .ThenInclude(s => s.Category)
                 .Include(b => b.Client)
+                .Include(b => b.Payment)
+                .Include(b => b.Review)
                 .Where(b => b.Service.StaffId == staffId);
 
             if (status.HasValue)
@@ -114,6 +122,53 @@ namespace Bookify.Infrastructure.Repositories
                 .AsNoTracking()
                 .ToListAsync();
 
+        public async Task<IEnumerable<Booking>> GetStaffDashboardBookingsAsync(Guid staffId, DateTime from, DateTime to)
+        {
+            var fromDate = from.Date;
+            var toDate = to.Date.AddDays(1).AddTicks(-1);
+
+            return await _db.Bookings
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Category)
+                .Include(b => b.Client)
+                .Include(b => b.Payment)
+                .Include(b => b.Review)
+                .Where(b => b.Service.StaffId == staffId && b.Date.Date >= fromDate && b.Date.Date <= toDate)
+                .OrderByDescending(b => b.Date).ThenByDescending(b => b.Time)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Domain.Entities.Booking>> GetAdminDashboardBookingsAsync(DateTime? from, DateTime? to)
+        {
+            var query = _db.Bookings
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Staff)
+                .Include(b => b.Service)
+                    .ThenInclude(s => s.Category)
+                .Include(b => b.Client)
+                .Include(b => b.Payment)
+                .Include(b => b.Review)
+                .AsQueryable();
+
+            if (from.HasValue)
+            {
+                var fromDate = from.Value.Date;
+                query = query.Where(b => b.Date >= fromDate);
+            }
+            
+            if (to.HasValue)
+            {
+                var toDate = to.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(b => b.Date <= toDate);
+            }
+
+            return await query
+                .OrderByDescending(b => b.Date).ThenByDescending(b => b.Time)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Booking>> GetAllAsync(
             DateTime? from,
             DateTime? to,
@@ -130,6 +185,8 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(b => b.Service)
                     .ThenInclude(s => s.Category)
                 .Include(b => b.Client)
+                .Include(b => b.Payment)
+                .Include(b => b.Review)
                 .AsQueryable();
 
             if (from.HasValue)
@@ -183,6 +240,8 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(b => b.Service)
                     .ThenInclude(s => s.Category)
                 .Include(b => b.Client)
+                .Include(b => b.Payment)
+                .Include(b => b.Review)
                 .AsQueryable();
 
             if (from.HasValue)
@@ -246,6 +305,13 @@ namespace Bookify.Infrastructure.Repositories
                 query = query.Where(b => b.Service.StaffId == staffId.Value);
 
             return await query.Include(b => b.Service).SumAsync(b => (double)b.Service.Price);
+        }
+
+        public async Task<double> GetTotalPlatformRevenueAsync()
+        {
+            return await _db.Bookings
+                .Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Succeeded)
+                .SumAsync(b => (double)b.Payment!.Amount);
         }
 
         public async Task SaveChangesAsync()

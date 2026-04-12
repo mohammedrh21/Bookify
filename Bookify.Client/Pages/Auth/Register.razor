@@ -10,10 +10,11 @@
                 <div class="flex items-center justify-between text-sm font-medium">
                     <div class="@StepClass(1)">1. Account Type</div>
                     <div class="@StepClass(2)">2. Account Details</div>
+                    <div class="@StepClass(3)">3. Verify Email</div>
                 </div>
                 <div class="mt-3 h-2 bg-gray-200 rounded-full">
                     <div class="h-2 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-500"
-                         style="width:@(_step == 1 ? "50%" : "100%")">
+                         style="width:@(_step == 1 ? "33%" : _step == 2 ? "66%" : "100%")">
                     </div>
                 </div>
             </div>
@@ -36,8 +37,8 @@
                         <div @onclick="() => SelectRole(false)"
                              class="cursor-pointer p-6 rounded-2xl border-2 transition-all duration-300
                                  @(!_isStaffRegister
-                                                             ? "border-blue-600 bg-blue-50 shadow-xl scale-105"
-                                                             : "border-gray-200 hover:border-blue-400 hover:shadow-md")">
+                                                         ? "border-blue-600 bg-blue-50 shadow-xl scale-105"
+                                                         : "border-gray-200 hover:border-blue-400 hover:shadow-md")">
 
                             <div class="flex flex-col items-center text-center space-y-3">
                                 <div class="w-14 h-14 flex items-center justify-center bg-blue-100 rounded-2xl">
@@ -57,8 +58,8 @@
                         <div @onclick="() => SelectRole(true)"
                              class="cursor-pointer p-6 rounded-2xl border-2 transition-all duration-300
                                  @(_isStaffRegister
-                                                             ? "border-indigo-600 bg-indigo-50 shadow-xl scale-105"
-                                                             : "border-gray-200 hover:border-indigo-400 hover:shadow-md")">
+                                                         ? "border-indigo-600 bg-indigo-50 shadow-xl scale-105"
+                                                         : "border-gray-200 hover:border-indigo-400 hover:shadow-md")">
 
                             <div class="flex flex-col items-center text-center space-y-3">
                                 <div class="w-14 h-14 flex items-center justify-center bg-indigo-100 rounded-2xl">
@@ -121,11 +122,16 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Phone</label>
-                        <div class="relative">
-                            <i class="fa-solid fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <InputText @bind-Value="_model.Phone"
-                                       class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
-                                       placeholder="+1 (555) 000-0000" />
+                        <div class="flex gap-2">
+                             @* Custom Country Picker *@
+                            <Bookify.Client.Components.UI.CountryPicker SelectedCountry="_selectedCountry" OnCountrySelected="HandleCountrySelected" />
+                            
+                            <div class="relative flex-1">
+                                <i class="fa-solid fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                <InputText @bind-Value="_phoneNumber"
+                                           class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
+                                           placeholder="555 000-0000" />
+                            </div>
                         </div>
                         <ValidationMessage For="() => _model.Phone" class="text-xs text-red-500 mt-1 ml-1" />
                     </div>
@@ -173,16 +179,87 @@
                             @if (_loading)
                             {
                                 <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span>Creating...</span>
+                                <span>Sending OTP...</span>
                             }
                             else
                             {
-                                <span>Create Account</span>
-                                <i class="fa-solid fa-user-plus ml-1"></i>
+                                <span>Send Verification Code</span>
+                                <i class="fa-solid fa-paper-plane ml-1"></i>
                             }
                         </button>
                     </div>
                 </EditForm>
+            }
+
+            <!-- STEP 3: OTP Verification -->
+            @if (_step == 3)
+            {
+                <div class="space-y-6 animate-register-page-fadeIn">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-envelope-open-text text-blue-600 text-2xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800">Check Your Email</h2>
+                        <p class="text-gray-500 text-sm mt-2">
+                            We sent a 6-digit verification code to<br />
+                            <span class="font-semibold text-gray-700">@_model.Email</span>
+                        </p>
+                        <p class="text-xs text-gray-400 mt-1">The code expires in 5 minutes.</p>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <div class="p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3 text-red-700 shadow-sm">
+                            <i class="fa-solid fa-circle-exclamation text-red-500 mt-1"></i>
+                            <p class="text-sm font-medium">@_error</p>
+                        </div>
+                    }
+
+                    <!-- OTP Input -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2 ml-1 text-center">
+                            Enter Verification Code
+                        </label>
+                        <input @bind="_otp"
+                               @bind:event="oninput"
+                               maxlength="6"
+                               inputmode="numeric"
+                               placeholder="000000"
+                               class="w-full text-center text-3xl font-bold tracking-[0.5em] py-4 rounded-xl border-2 border-gray-200 focus:ring-2 focus:ring-blue-400 focus:outline-none focus:border-blue-400 transition-all text-gray-800 bg-gray-50" />
+                        <p class="text-xs text-gray-400 text-center mt-2">Enter the 6-digit code from your email</p>
+                    </div>
+
+                    <div class="flex gap-4 pt-2">
+                        <button type="button" @onclick="() => { _step = 2; _error = string.Empty; _otp = string.Empty; }"
+                                class="w-1/3 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-arrow-left text-xs"></i>
+                            Back
+                        </button>
+
+                        <button @onclick="HandleVerifyOtp" disabled="@(_loading || _otp.Length < 6)"
+                                class="w-2/3 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                            @if (_loading)
+                            {
+                                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>Verifying...</span>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span>Verify & Create Account</span>
+                            }
+                        </button>
+                    </div>
+
+                    <!-- Resend -->
+                    <div class="text-center pt-2">
+                        <span class="text-sm text-gray-500">Didn't receive a code? </span>
+                        <button @onclick="HandleRegister" disabled="@_loading"
+                                class="text-sm text-blue-600 font-semibold hover:underline disabled:opacity-50">
+                            Resend OTP
+                        </button>
+                    </div>
+                </div>
             }
 
         </div>

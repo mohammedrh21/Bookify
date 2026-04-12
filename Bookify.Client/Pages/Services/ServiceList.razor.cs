@@ -33,7 +33,7 @@ public partial class ServiceList : ComponentBase
         }
         catch (Exception)
         {
-            ToastService.ShowError("Could not load categories.");
+            // unexpected error
         }
 
         await LoadServicesAsync();
@@ -60,12 +60,12 @@ public partial class ServiceList : ComponentBase
             }
             else
             {
-                ToastService.ShowError(svcResult.Message ?? "Failed to load services.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while loading services.");
+            // unexpected error
         }
         finally
         {

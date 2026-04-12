@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Forms;
 using Bookify.Client.Models.Profile;
 using Bookify.Client.Models.Common;
 using Bookify.Client.Services;
+using Bookify.Client.Data;
 
 namespace Bookify.Client.Pages.Staff;
 
@@ -13,17 +14,20 @@ public partial class StaffProfile
 
     private StaffProfileModel? _profile;
     private UpdateStaffProfileModel _edit = new();
-    private ChangePasswordModel _pwd = new();
     private bool _loading = true;
     private bool _saving = false;
-    private bool _changingPwd = false;
     private bool _uploading = false;
-    private string _pwdError = string.Empty;
     private string _genderValue = "0";
 
-    private bool _showCurrent;
-    private bool _showNew;
-    private bool _showConfirm;
+    // Country Picker State
+    private CountryModel _selectedCountry = CountryData.Countries.FirstOrDefault(c => c.Iso3Code == "SAU") ?? CountryData.Countries.First();
+    private string _phoneNumber = string.Empty;
+
+    private void HandleCountrySelected(CountryModel country)
+    {
+        _selectedCountry = country;
+        StateHasChanged();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -40,15 +44,12 @@ public partial class StaffProfile
                     Gender      = _profile.Gender
                 };
                 _genderValue = (_profile.Gender ?? GenderType.Female).ToString("d");
+                ExtractPhoneData(_profile.Phone);
             }
             else
             {
-                ToastService.ShowError(result.Message ?? "Failed to load profile.");
+                // errors are already shown by BaseApiService
             }
-        }
-        catch (Exception)
-        {
-            ToastService.ShowError("An unexpected error occurred while loading your profile.");
         }
         finally
         {
@@ -60,6 +61,21 @@ public partial class StaffProfile
     {
         if (_profile is null) return;
         _edit.Gender = (GenderType)int.Parse(_genderValue);
+
+        // Combine Dial Code and Phone Number
+        if (!string.IsNullOrWhiteSpace(_phoneNumber))
+        {
+            var cleanPhone = _phoneNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "");
+            if (cleanPhone.StartsWith("0"))
+            {
+                cleanPhone = cleanPhone[1..];
+            }
+            _edit.Phone = $"{_selectedCountry.DialCode}{cleanPhone}";
+        }
+        else 
+        {
+            _edit.Phone = string.Empty;
+        }
 
         _saving = true;
         try
@@ -74,12 +90,12 @@ public partial class StaffProfile
             }
             else
             {
-                ToastService.ShowError(result.Message ?? "Failed to update profile.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while saving your profile.");
+            // unexpected network/parse error
         }
         finally
         {
@@ -87,45 +103,7 @@ public partial class StaffProfile
         }
     }
 
-    private async Task ChangePasswordAsync()
-    {
-        _pwdError = string.Empty;
-        if (string.IsNullOrWhiteSpace(_pwd.CurrentPassword) || string.IsNullOrWhiteSpace(_pwd.NewPassword) || string.IsNullOrWhiteSpace(_pwd.ConfirmPassword))
-        {
-            _pwdError = "All password fields are required."; return;
-        }
-        if (_pwd.NewPassword.Length < 6)
-        {
-            _pwdError = "New password must be at least 6 characters."; return;
-        }
-        if (_pwd.NewPassword != _pwd.ConfirmPassword)
-        {
-            _pwdError = "New password and confirmation do not match."; return;
-        }
 
-        _changingPwd = true;
-        try
-        {
-            var result = await ProfileService.ChangeStaffPasswordAsync(_pwd);
-            if (result.Success)
-            {
-                _pwd = new();
-                ToastService.ShowSuccess("Password updated successfully.");
-            }
-            else
-            {
-                _pwdError = result.Message ?? "Failed to change password.";
-            }
-        }
-        catch (Exception)
-        {
-            _pwdError = "An unexpected error occurred while changing your password.";
-        }
-        finally
-        {
-            _changingPwd = false;
-        }
-    }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {
@@ -160,6 +138,30 @@ public partial class StaffProfile
         finally
         {
             _uploading = false;
+        }
+    }
+
+    private void ExtractPhoneData(string? fullPhone)
+    {
+        if (string.IsNullOrWhiteSpace(fullPhone))
+        {
+            _phoneNumber = string.Empty;
+            return;
+        }
+
+        var matchedCountry = CountryData.Countries
+            .Where(c => fullPhone.StartsWith(c.DialCode))
+            .OrderByDescending(c => c.DialCode.Length)
+            .FirstOrDefault();
+
+        if (matchedCountry != null)
+        {
+            _selectedCountry = matchedCountry;
+            _phoneNumber = fullPhone.Substring(matchedCountry.DialCode.Length);
+        }
+        else
+        {
+            _phoneNumber = fullPhone;
         }
     }
 

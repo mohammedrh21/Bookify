@@ -1,4 +1,4 @@
-﻿namespace Bookify.Application.DTO.Booking
+namespace Bookify.Application.DTO.Booking
 {
     public class BookingResponse
     {
@@ -17,5 +17,7 @@
         public decimal Price { get; set; }
         public int DurationMinutes { get; set; }
         public string? CategoryName { get; set; }
+        public string PaymentStatus { get; set; } = "Pending";
+        public bool IsReviewed { get; set; }
     }
 }

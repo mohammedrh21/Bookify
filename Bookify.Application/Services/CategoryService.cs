@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Bookify.Application.Common;
 using Bookify.Application.DTO.Category;
 using Bookify.Application.Interfaces;
@@ -50,12 +50,12 @@ namespace Bookify.Application.Services
                 data: _mapper.Map<CategoryResponse>(category));
         }
 
-        /// <summary>Returns all active categories.</summary>
-        public async Task<ServiceResponse<IEnumerable<CategoryResponse>>> GetAllAsync()
+        /// <summary>Returns all active categories (optional limit).</summary>
+        public async Task<ServiceResponse<IEnumerable<CategoryResponse>>> GetAllAsync(int? limit = null)
         {
-            _logger.LogInformation("Fetching all categories");
+            _logger.LogInformation($"Fetching categories{(limit.HasValue ? $" (limit: {limit})" : "")}");
 
-            var categories = await _repo.GetAllAsync();
+            var categories = await _repo.GetAllAsync(limit);
             return ServiceResponse<IEnumerable<CategoryResponse>>.Ok(
                 data: _mapper.Map<IEnumerable<CategoryResponse>>(categories));
         }

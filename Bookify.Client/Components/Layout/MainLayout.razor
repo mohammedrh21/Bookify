@@ -2,16 +2,26 @@
 @using Bookify.Client.Components.Layout
 @using Bookify.Client.Components.Shared
 
-<div class="min-h-screen flex flex-col bg-gray-50">
-    <NavBar />
-
-    <main class="flex-1">
-        <div class="page-fade-in">
+<AuthorizeView>
+    <Authorized>
+        @if (context.User.IsInRole("Admin") || context.User.IsInRole("Staff"))
+        {
+            <ManagementLayout>
+                @Body
+            </ManagementLayout>
+        }
+        else
+        {
+            <ClientLayout>
+                @Body
+            </ClientLayout>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <ClientLayout>
             @Body
-        </div>
-    </main>
+        </ClientLayout>
+    </NotAuthorized>
+</AuthorizeView>
 
-    <Footer />
-
-    <ToastContainer />
-</div>
+<ToastContainer />

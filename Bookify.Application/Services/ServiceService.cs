@@ -12,6 +12,7 @@ using Bookify.Domain.Rules;
 using Microsoft.AspNetCore.Http;
 
 using Bookify.Application.Interfaces.Auth;
+using Bookify.Application.Interfaces.Notification;
 
 namespace Bookify.Application.Services
 {
@@ -26,6 +27,7 @@ namespace Bookify.Application.Services
         private readonly IAppLogger<ServiceService> _logger;
         private readonly IFileService _fileService;
         private readonly ICurrentUserService _currentUserService;
+        private readonly INotificationService _notificationService;
 
         public ServiceService(
             IServiceRepository repo,
@@ -33,7 +35,8 @@ namespace Bookify.Application.Services
             IMapper mapper,
             IAppLogger<ServiceService> logger,
             IFileService fileService,
-            ICurrentUserService currentUserService)
+            ICurrentUserService currentUserService,
+            INotificationService notificationService)
         {
             _repo = repo;
             _categoryRepo = categoryRepo;
@@ -41,6 +44,7 @@ namespace Bookify.Application.Services
             _logger = logger;
             _fileService = fileService;
             _currentUserService = currentUserService;
+            _notificationService = notificationService;
         }
 
         // ─────────────────────────────────────────────
@@ -240,6 +244,18 @@ namespace Bookify.Application.Services
 
             await _repo.UpdateAsync(service);
             await _repo.SaveChangesAsync();
+
+            // Notify the staff member that their service was deleted
+            if (_currentUserService.IsAdmin)
+            {
+                await _notificationService.CreateAsync(
+                    service.StaffId,
+                    "Service Deleted",
+                    $"Your service '{service.Name}' has been deleted by an administrator.",
+                    Domain.Enums.NotificationType.ServiceDeleted,
+                    service.Id,
+                    "/services/my-service");
+            }
 
             _logger.LogInformation($"Service soft-deleted: {id}");
 

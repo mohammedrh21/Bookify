@@ -1,295 +1,217 @@
 @page "/staff/profile"
 @using Bookify.Client.Models.Profile
+@using Bookify.Client.Models.Common
+@using Bookify.Client.Data
 @attribute [Authorize(Policy = "StaffOnly")]
-
 
 <PageTitle>Staff Profile — Bookify</PageTitle>
 
 <AuthorizeView Policy="StaffOnly" Context="staffContext">
     <Authorized>
-        <!-- Background decoration -->
-        <div class="fixed inset-0 z-[-1] pointer-events-none bg-gray-50/50">
-            <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/5 blur-[120px]"></div>
-            <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-600/5 blur-[120px]"></div>
+        <!-- Ambient Background -->
+        <div class="fixed inset-0 -z-10 pointer-events-none">
+            <div class="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-blue-50/30"></div>
+            <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-400/10 rounded-full blur-3xl"></div>
         </div>
 
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            
-            <!-- Header -->
-            <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-3">
-                        <i class="fas fa-briefcase"></i> Staff Portal
-                    </div>
-                    <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">My Profile</h1>
-                    <p class="text-gray-500 mt-2 text-lg">Manage your staff details and personal information.</p>
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+            <!-- Page Header -->
+            <div class="mb-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider mb-3">
+                    <i class="fas fa-briefcase text-[10px]"></i> Staff Portal
                 </div>
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">My Profile</h1>
+                <p class="text-gray-500 mt-1">Manage your staff details and personal information.</p>
             </div>
 
             @if (_loading)
             {
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="h-80 bg-white rounded-[2rem] border border-gray-100 shadow-sm animate-pulse"></div>
-                    <div class="lg:col-span-2 h-[45rem] bg-white rounded-[2rem] border border-gray-100 shadow-sm animate-pulse"></div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="h-72 bg-white/60 rounded-3xl border border-gray-100 shadow-sm animate-pulse"></div>
+                    <div class="lg:col-span-2 h-96 bg-white/60 rounded-3xl border border-gray-100 shadow-sm animate-pulse"></div>
                 </div>
             }
             else if (_profile is null)
             {
-                <div class="flex flex-col items-center justify-center py-20 bg-white/50 backdrop-blur-xl rounded-[2.5rem] border border-gray-100 shadow-xl">
-                    <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                        <i class="fas fa-user-slash text-4xl text-gray-400"></i>
+                <div class="flex flex-col items-center justify-center py-24 bg-white/70 backdrop-blur rounded-3xl border border-gray-100 shadow">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-5">
+                        <i class="fas fa-user-slash text-3xl text-gray-400"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Profile Unavailable</h2>
-                    <p class="text-gray-500">Could not load your profile details. Please try refreshing the page.</p>
+                    <h2 class="text-xl font-bold text-gray-800 mb-1">Profile Unavailable</h2>
+                    <p class="text-gray-500 text-sm">Could not load your profile. Please refresh the page.</p>
                 </div>
             }
             else
             {
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    <!-- Avatar Card -->
-                    <div class="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-8 flex flex-col items-center text-center gap-5 relative overflow-hidden group">
-                        <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-blue-600/10 to-cyan-600/10 -z-10 group-hover:h-full transition-all duration-500"></div>
-                        
-                        <div class="relative">
-                            <div class="absolute inset-0 bg-blue-600 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-300"></div>
-                            <div class="w-28 h-28 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-2xl shadow-blue-500/30 ring-4 ring-white relative z-10 transform group-hover:scale-105 transition-transform duration-300 overflow-hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- ── Avatar / Info Card ── -->
+                    <div class="bg-white/80 backdrop-blur-xl rounded-3xl border border-gray-100 shadow-lg p-6 flex flex-col items-center text-center gap-4 relative overflow-hidden">
+                        <!-- Gradient accent -->
+                        <div class="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-blue-500/10 to-transparent rounded-t-3xl pointer-events-none"></div>
+
+                        <!-- Avatar -->
+                        <div class="relative mt-2">
+                            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-cyan-600 flex items-center justify-center shadow-lg ring-4 ring-white overflow-hidden group">
                                 @if (string.IsNullOrEmpty(_profile.ImagePath))
                                 {
-                                    <span class="text-white text-5xl font-black shadow-sm">@GetInitial()</span>
+                                    <span class="text-white text-4xl font-black">@GetInitial()</span>
                                 }
                                 else
                                 {
                                     <img src="@_profile.ImagePath" class="w-full h-full object-cover" alt="Profile" />
                                 }
 
-                                <!-- Upload Overlay -->
-                                <label for="staffProfileImg" class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-20">
-                                    <i class="fas fa-camera text-white text-xl mb-1"></i>
-                                    <span class="text-white text-[10px] font-bold uppercase tracking-tighter">Change</span>
+                                <label for="staffProfileImg" class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                    <i class="fas fa-camera text-white text-lg"></i>
+                                    <span class="text-white text-[9px] font-bold uppercase tracking-wide mt-0.5">Change</span>
                                     <InputFile id="staffProfileImg" OnChange="HandleFileSelected" class="hidden" accept=".jpg,.jpeg,.png" />
                                 </label>
                             </div>
 
                             @if (_uploading)
                             {
-                                <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center z-30">
-                                    <i class="fas fa-circle-notch animate-spin text-blue-600"></i>
+                                <div class="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center">
+                                    <i class="fas fa-circle-notch animate-spin text-blue-500 text-sm"></i>
                                 </div>
                             }
                         </div>
 
-                        <div class="mt-2">
-                            <h3 class="text-2xl font-black text-gray-900 tracking-tight">@_profile.FullName</h3>
-                            <p class="text-gray-500 font-medium flex items-center justify-center gap-2 mt-1">
-                                <i class="fas fa-envelope text-gray-400"></i> @_profile.Email
+                        <!-- Name / Email -->
+                        <div>
+                            <h2 class="text-lg font-extrabold text-gray-900">@_profile.FullName</h2>
+                            <p class="text-sm text-gray-500 mt-0.5 flex items-center justify-center gap-1.5">
+                                <i class="fas fa-envelope text-gray-400 text-xs"></i>
+                                @_profile.Email
                             </p>
                         </div>
 
-                        <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-2"></div>
+                        <div class="w-full h-px bg-gray-100"></div>
 
-                        <div class="w-full flex flex-col gap-3">
-                            <div class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 text-blue-700 font-bold text-sm shadow-sm flex items-center justify-center gap-2">
-                                <i class="fas fa-user-tie text-blue-500"></i> Staff Member
-                            </div>
-                            
-                            @if (_profile.Gender.HasValue)
-                            {
-                                <div class="px-5 py-2.5 rounded-2xl bg-gray-50 border border-gray-100 text-gray-700 font-semibold text-sm flex items-center justify-between">
-                                    <span class="text-gray-400 text-xs uppercase tracking-wider font-bold">Gender</span>
-                                    <span>@GetGenderLabel(_profile.Gender.Value)</span>
-                                </div>
-                            }
+                        <!-- Role Badge -->
+                        <div class="w-full px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 text-blue-700 text-sm font-bold flex items-center justify-center gap-2">
+                            <i class="fas fa-user-tie text-blue-500 text-xs"></i> Staff Member
                         </div>
+
+                        <!-- Info Chips -->
+                        @if (_profile.Gender.HasValue)
+                        {
+                            <div class="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl bg-gray-50 border border-gray-100 text-sm">
+                                <span class="text-gray-400 text-xs font-bold uppercase tracking-wide">Gender</span>
+                                <span class="text-gray-700 font-semibold">@GetGenderLabel(_profile.Gender.Value)</span>
+                            </div>
+                        }
                     </div>
 
-                    <!-- Right Column -->
-                    <div class="lg:col-span-2 flex flex-col gap-8">
+                    <!-- ── Edit Form ── -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white/80 backdrop-blur-xl rounded-3xl border border-gray-100 shadow-lg overflow-hidden">
 
-                        <!-- Personal Info Form -->
-                        <div class="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-8 md:p-10 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-                            
-                            <div class="flex items-center gap-4 mb-8 relative z-10">
-                                <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 text-xl shadow-inner">
+                            <!-- Card Header -->
+                            <div class="px-8 pt-7 pb-5 border-b border-gray-100 flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner shrink-0">
                                     <i class="fas fa-id-badge"></i>
                                 </div>
                                 <div>
-                                    <h2 class="text-xl font-extrabold text-gray-900">Personal Details</h2>
-                                    <p class="text-sm text-gray-500 font-medium">Update your contact information.</p>
+                                    <h2 class="text-base font-extrabold text-gray-900">Personal Details</h2>
+                                    <p class="text-xs text-gray-400 font-medium mt-0.5">Update your contact information.</p>
                                 </div>
                             </div>
 
-                            <div class="space-y-6 relative z-10">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div class="relative group">
-                                        <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Full Name</label>
-                                        <div class="relative flex items-center">
-                                            <div class="absolute left-4 text-gray-400 group-focus-within:text-blue-500 transition-colors">
-                                                <i class="fas fa-user-edit"></i>
+                            <!-- Form Body -->
+                            <div class="p-8 space-y-5">
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <!-- Full Name -->
+                                    <div class="group">
+                                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Full Name</label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-4 flex items-center text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+                                                <i class="fas fa-id-card text-sm"></i>
                                             </div>
                                             <input type="text" @bind="_edit.FullName"
-                                                   class="w-full pl-11 pr-4 py-3.5 bg-gray-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-gray-900 font-bold placeholder-gray-400" placeholder="Enter your full name" />
+                                                   class="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all text-gray-900 font-semibold text-sm placeholder-gray-300"
+                                                   placeholder="Your full name" />
                                         </div>
                                     </div>
 
-                                    <div class="relative group">
-                                        <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
-                                        <div class="relative flex items-center">
-                                            <div class="absolute left-4 text-gray-400 group-focus-within:text-blue-500 transition-colors">
-                                                <i class="fas fa-phone-alt"></i>
+                                    <!-- Phone Number -->
+                                    <div class="group">
+                                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Phone Number</label>
+                                        <div class="flex items-stretch gap-2">
+                                            <Bookify.Client.Components.UI.CountryPicker SelectedCountry="_selectedCountry" OnCountrySelected="HandleCountrySelected" />
+                                            <div class="relative flex-1 min-w-0">
+                                                <div class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
+                                                    <i class="fas fa-phone-alt text-sm"></i>
+                                                </div>
+                                                <input type="tel" @bind="_phoneNumber"
+                                                       class="w-full pl-9 pr-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all text-gray-900 font-semibold text-sm placeholder-gray-300"
+                                                       placeholder="Number" />
                                             </div>
-                                            <input type="tel" @bind="_edit.Phone"
-                                                   class="w-full pl-11 pr-4 py-3.5 bg-gray-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-gray-900 font-bold placeholder-gray-400" placeholder="Phone number" />
                                         </div>
                                     </div>
 
-                                    <div class="relative group">
-                                        <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Gender</label>
-                                        <div class="relative flex items-center">
-                                            <div class="absolute left-4 text-gray-400 group-focus-within:text-blue-500 transition-colors z-10">
-                                                <i class="fas fa-venus-mars"></i>
+                                    <!-- Gender -->
+                                    <div class="group">
+                                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Gender</label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-4 flex items-center text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none z-10">
+                                                <i class="fas fa-venus-mars text-sm"></i>
                                             </div>
                                             <select @bind="_genderValue"
-                                                    class="w-full pl-11 pr-10 py-3.5 bg-gray-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-gray-900 font-bold appearance-none cursor-pointer">
+                                                    class="w-full pl-10 pr-9 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all text-gray-900 font-semibold text-sm appearance-none cursor-pointer">
                                                 <option value="0">Female</option>
                                                 <option value="1">Male</option>
                                                 <option value="2">Prefer not to say</option>
                                             </select>
-                                            <div class="absolute right-4 text-gray-400 pointer-events-none">
-                                                <i class="fas fa-chevron-down text-sm"></i>
+                                            <div class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">
+                                                <i class="fas fa-chevron-down text-xs"></i>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="relative group">
-                                        <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
-                                        <div class="relative flex items-center">
-                                            <div class="absolute left-4 text-gray-400">
-                                                <i class="fas fa-envelope"></i>
+                                    <!-- Email (read-only) -->
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Email Address</label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-4 flex items-center text-gray-400 pointer-events-none">
+                                                <i class="fas fa-envelope text-sm"></i>
                                             </div>
                                             <input type="email" value="@_profile.Email" readonly
-                                                   class="w-full pl-11 pr-4 py-3.5 bg-gray-100 rounded-2xl border-2 border-transparent text-gray-500 font-bold cursor-not-allowed opacity-70" />
-                                            <div class="absolute right-4 text-xs font-bold text-gray-400 uppercase bg-gray-200 px-2 py-1 rounded-md">Read Only</div>
+                                                   class="w-full pl-10 pr-24 py-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-400 font-semibold text-sm cursor-not-allowed" />
+                                            <div class="absolute inset-y-0 right-3 flex items-center">
+                                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-200 px-2 py-1 rounded-md">Read Only</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="pt-4 flex justify-end">
+                                <!-- Save Button -->
+                                <div class="pt-2 flex justify-end">
                                     <button @onclick="SaveProfileAsync" disabled="@_saving"
-                                            class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-extrabold rounded-2xl hover:from-blue-700 hover:to-cyan-700 transition-all shadow-xl shadow-blue-500/30 hover:-translate-y-1 hover:shadow-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 relative overflow-hidden group/btn">
-                                        <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-in-out"></div>
-                                        <div class="relative flex items-center justify-center gap-2">
-                                            @if (_saving)
-                                            {
-                                                <i class="fas fa-circle-notch animate-spin"></i>
-                                                <span>Saving Changes...</span>
-                                            }
-                                            else
-                                            {
-                                                <i class="fas fa-check-circle"></i>
-                                                <span>Save Profile</span>
-                                            }
-                                        </div>
+                                            class="inline-flex items-center gap-2 px-7 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                                        @if (_saving)
+                                        {
+                                            <i class="fas fa-circle-notch animate-spin"></i>
+                                            <span>Saving...</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-check"></i>
+                                            <span>Save Profile</span>
+                                        }
                                     </button>
                                 </div>
+
                             </div>
                         </div>
-
-                        <!-- Change Password Form -->
-                        <div class="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-8 md:p-10 relative overflow-hidden">
-                            <div class="absolute top-0 left-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/3"></div>
-
-                            <div class="flex items-center gap-4 mb-8 relative z-10">
-                                <div class="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 text-xl shadow-inner">
-                                    <i class="fas fa-key"></i>
-                                </div>
-                                <div>
-                                    <h2 class="text-xl font-extrabold text-gray-900">Security</h2>
-                                    <p class="text-sm text-gray-500 font-medium">Update your password regularly to keep your account safe.</p>
-                                </div>
-                            </div>
-
-                            <div class="space-y-6 relative z-10">
-                                <div class="relative group">
-                                    <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Current Password</label>
-                                    <div class="relative flex items-center">
-                                        <div class="absolute left-4 text-gray-400 group-focus-within:text-amber-500 transition-colors">
-                                            <i class="fas fa-lock"></i>
-                                        </div>
-                                        <input type=@(_showCurrent ? "text" : "password") @bind="_pwd.CurrentPassword"
-                                               class="w-full pl-11 pr-12 py-3.5 bg-gray-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all text-gray-900 font-bold placeholder-gray-400" placeholder="••••••••" />
-                                        <button type="button" @onclick="() => _showCurrent = !_showCurrent" class="absolute right-4 text-gray-400 hover:text-gray-700 transition-colors w-6 h-6 flex items-center justify-center">
-                                            <i class="fas @(_showCurrent ? "fa-eye-slash" : "fa-eye")"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div class="relative group">
-                                        <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">New Password</label>
-                                        <div class="relative flex items-center">
-                                            <div class="absolute left-4 text-gray-400 group-focus-within:text-amber-500 transition-colors">
-                                                <i class="fas fa-shield-alt"></i>
-                                            </div>
-                                            <input type=@(_showNew ? "text" : "password") @bind="_pwd.NewPassword"
-                                                   class="w-full pl-11 pr-12 py-3.5 bg-gray-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all text-gray-900 font-bold placeholder-gray-400" placeholder="••••••••" />
-                                            <button type="button" @onclick="() => _showNew = !_showNew" class="absolute right-4 text-gray-400 hover:text-gray-700 transition-colors w-6 h-6 flex items-center justify-center">
-                                                <i class="fas @(_showNew ? "fa-eye-slash" : "fa-eye")"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div class="relative group">
-                                        <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Confirm Password</label>
-                                        <div class="relative flex items-center">
-                                            <div class="absolute left-4 text-gray-400 group-focus-within:text-amber-500 transition-colors">
-                                                <i class="fas fa-check-double"></i>
-                                            </div>
-                                            <input type=@(_showConfirm ? "text" : "password") @bind="_pwd.ConfirmPassword"
-                                                   class="w-full pl-11 pr-12 py-3.5 bg-gray-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all text-gray-900 font-bold placeholder-gray-400" placeholder="••••••••" />
-                                            <button type="button" @onclick="() => _showConfirm = !_showConfirm" class="absolute right-4 text-gray-400 hover:text-gray-700 transition-colors w-6 h-6 flex items-center justify-center">
-                                                <i class="fas @(_showConfirm ? "fa-eye-slash" : "fa-eye")"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                @if (!string.IsNullOrEmpty(_pwdError))
-                                {
-                                    <div class="p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3 text-red-600">
-                                        <i class="fas fa-exclamation-circle mt-0.5"></i>
-                                        <p class="text-sm font-bold">@_pwdError</p>
-                                    </div>
-                                }
-
-                                <div class="pt-4 flex justify-end">
-                                    <button @onclick="ChangePasswordAsync" disabled="@_changingPwd"
-                                            class="w-full sm:w-auto px-8 py-4 bg-gray-900 text-white font-extrabold rounded-2xl hover:bg-black transition-all shadow-xl shadow-gray-900/20 hover:-translate-y-1 hover:shadow-gray-900/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 relative overflow-hidden group/btn">
-                                        <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-in-out"></div>
-                                        <div class="relative flex items-center justify-center gap-2">
-                                            @if (_changingPwd)
-                                            {
-                                                <i class="fas fa-circle-notch animate-spin"></i>
-                                                <span>Updating...</span>
-                                            }
-                                            else
-                                            {
-                                                <i class="fas fa-lock text-amber-400"></i>
-                                                <span>Update Password</span>
-                                            }
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
+
                 </div>
             }
+
         </div>
     </Authorized>
 </AuthorizeView>
-
-
-

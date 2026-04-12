@@ -1,0 +1,150 @@
+@page "/admin/staff-members"
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Staff Members — Bookify Admin</PageTitle>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Staff Members</h1>
+            <p class="text-gray-500 mt-1">View and manage all registered staff, their services and performance.</p>
+        </div>
+    </div>
+
+    @* ── Filter Panel ────────────────────────────────────────────────────── *@
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input value="@_search" @oninput="OnSearchChanged"
+                       placeholder="Search by name or email..."
+                       class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+            </div>
+            <button @onclick="ResetFilters"
+                    class="px-5 py-2.5 text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors whitespace-nowrap">
+                <i class="fa-solid fa-rotate-right mr-1"></i> Reset
+            </button>
+        </div>
+    </div>
+
+    @* ── Content ─────────────────────────────────────────────────────────── *@
+    @if (_loading)
+    {
+        <LoadingSpinner Message="Loading staff members..." />
+    }
+    else if (_staff == null || !_staff.Any())
+    {
+        <EmptyState Icon="👥" Title="No staff found"
+                    Message="No staff members match your current filters." />
+    }
+    else
+    {
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-100 text-gray-500 text-sm font-medium uppercase tracking-wider">
+                            <th class="px-6 py-4">Staff Member</th>
+                            <th class="px-6 py-4">Contact</th>
+                            <th class="px-6 py-4">Service</th>
+                            <th class="px-6 py-4 text-center">Status</th>
+                            <th class="px-6 py-4 text-center">Bookings</th>
+                            <th class="px-6 py-4 text-center">Rating</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach (var staff in _staff)
+                        {
+                            <tr class="hover:bg-gray-50 transition-colors">
+
+                                @* ── Staff Photo + Name (clickable) ── *@
+                                <td class="px-6 py-5">
+                                    <div class="flex items-center gap-3 cursor-pointer" @onclick="() => NavigateToDetails(staff.StaffId)">
+                                        @if (!string.IsNullOrEmpty(staff.ImagePath))
+                                        {
+                                            <img src="@staff.ImagePath"
+                                                 class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm ring-2 ring-primary-100 hover:ring-primary-400 transition-all"
+                                                 alt="@staff.FullName" />
+                                        }
+                                        else
+                                        {
+                                            <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white hover:ring-primary-400 transition-all">
+                                                @GetInitials(staff.FullName)
+                                            </div>
+                                        }
+                                        <div class="font-semibold text-gray-900 hover:text-primary-600 transition-colors">
+                                            @staff.FullName
+                                        </div>
+                                    </div>
+                                </td>
+
+                                @* ── Email (clickable → details) + Phone ── *@
+                                <td class="px-6 py-5 text-gray-600">
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center gap-2 cursor-pointer hover:text-primary-600 transition-colors"
+                                             @onclick="() => NavigateToDetails(staff.StaffId)">
+                                            <i class="fa-solid fa-envelope text-gray-400 text-xs"></i>
+                                            <span class="text-sm">@staff.Email</span>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(staff.Phone))
+                                        {
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-phone text-gray-400 text-xs"></i>
+                                                <span class="text-sm">@staff.Phone</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+
+                                @* ── Service ── *@
+                                <td class="px-6 py-5">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        @(string.IsNullOrEmpty(staff.ServiceName) ? "—" : staff.ServiceName)
+                                    </span>
+                                </td>
+
+                                @* ── Status Badge ── *@
+                                <td class="px-6 py-5 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold @(staff.IsActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
+                                        @(staff.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+
+                                @* ── Booking Highlight ── *@
+                                <td class="px-6 py-5 text-center">
+                                    <div class="flex flex-col items-center gap-1">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            @staff.TotalBookings Total
+                                        </span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                            @staff.CompletedBookings Done
+                                        </span>
+                                    </div>
+                                </td>
+
+                                @* ── Rating Highlight ── *@
+                                <td class="px-6 py-5 text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <i class="fa-solid fa-star text-amber-400 text-xs"></i>
+                                        <span class="text-sm font-semibold text-gray-700">@staff.Rating.ToString("F1")</span>
+                                    </div>
+                                </td>
+
+                                @* ── Actions ── *@
+                                <td class="px-6 py-5 text-right">
+                                    <button @onclick="() => NavigateToDetails(staff.StaffId)"
+                                            class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 hover:text-primary-600 hover:border-primary-200 transition-all shadow-sm">
+                                        <span>View Details</span>
+                                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <Pagination CurrentPage="_page" TotalPages="_totalPages" TotalCount="_totalCount" OnPageChanged="OnPageChanged" />
+        </div>
+    }
+</div>

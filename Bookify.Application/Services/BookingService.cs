@@ -13,6 +13,7 @@ using Bookify.Domain.Exceptions;
 using Bookify.Domain.Rules;
 using Bookify.Application.DTO.Review;
 using Bookify.Application.Interfaces.Payment;
+using Bookify.Application.Interfaces.Notification;
 using Bookify.Domain.Contracts.Review;
 
 using Bookify.Application.Interfaces.Auth;
@@ -28,6 +29,7 @@ namespace Bookify.Application.Services
         private readonly IReviewRepository _reviewRepo;
         private readonly ICurrentUserService _currentUserService;
         private readonly IPaymentService _paymentService;
+        private readonly INotificationService _notificationService;
 
         public BookingService(
             IBookingRepository bookingRepo,
@@ -36,7 +38,8 @@ namespace Bookify.Application.Services
             IServiceRepository serviceRepo,
             IReviewRepository reviewRepo,
             ICurrentUserService currentUserService,
-            IPaymentService paymentService)
+            IPaymentService paymentService,
+            INotificationService notificationService)
         {
             _bookingRepo = bookingRepo;
             _mapper = mapper;
@@ -45,6 +48,7 @@ namespace Bookify.Application.Services
             _reviewRepo = reviewRepo;
             _currentUserService = currentUserService;
             _paymentService = paymentService;
+            _notificationService = notificationService;
         }
 
         // ─────────────────────────────────────────────
@@ -84,6 +88,19 @@ namespace Bookify.Application.Services
 
             await _bookingRepo.AddAsync(booking);
             await _bookingRepo.SaveChangesAsync();
+
+            // Notify the Staff who owns the service
+            var service = await _serviceRepo.GetByIdAsync(request.ServiceId);
+            if (service?.StaffId != null)
+            {
+                await _notificationService.CreateAsync(
+                    service.StaffId,
+                    "New Booking Received",
+                    $"A client has booked your service '{service.Name}' for {request.Date:MMM dd, yyyy}.",
+                    NotificationType.NewBooking,
+                    booking.Id,
+                    "/booking/service-bookings");
+            }
 
             _logger.LogInformation($"Pending Booking created: {booking.Id} awaiting Checkout.");
 
@@ -147,6 +164,28 @@ namespace Bookify.Application.Services
             await _bookingRepo.UpdateAsync(booking);
             await _bookingRepo.SaveChangesAsync();
 
+            // Notify the other party about cancellation
+            if (_currentUserService.IsStaff || _currentUserService.IsAdmin)
+            {
+                await _notificationService.CreateAsync(
+                    booking.ClientId,
+                    "Booking Cancelled",
+                    $"Your booking for '{booking.Service?.Name}' on {booking.Date:MMM dd, yyyy} has been cancelled.",
+                    NotificationType.BookingStatusChanged,
+                    booking.Id,
+                    "/my-bookings");
+            }
+            else if (_currentUserService.IsClient && booking.Service?.StaffId != null)
+            {
+                await _notificationService.CreateAsync(
+                    booking.Service.StaffId,
+                    "Booking Cancelled by Client",
+                    $"A client cancelled the booking for '{booking.Service?.Name}' on {booking.Date:MMM dd, yyyy}.",
+                    NotificationType.BookingStatusChanged,
+                    booking.Id,
+                    "/booking/service-bookings");
+            }
+
             _logger.LogInformation($"Booking cancelled: {booking.Id}");
 
             return ServiceResponse<Guid>.Ok(data: booking.Id, id: booking.Id, message: "Booking cancelled successfully.");
@@ -173,6 +212,15 @@ namespace Bookify.Application.Services
             await _bookingRepo.UpdateAsync(booking);
             await _bookingRepo.SaveChangesAsync();
 
+            // Notify the client that their booking is confirmed
+            await _notificationService.CreateAsync(
+                booking.ClientId,
+                "Booking Confirmed",
+                $"Your booking for '{booking.Service?.Name}' on {booking.Date:MMM dd, yyyy} has been confirmed.",
+                NotificationType.BookingStatusChanged,
+                booking.Id,
+                "/my-bookings");
+
             _logger.LogInformation($"Booking confirmed: {booking.Id}");
 
             return ServiceResponse<Guid>.Ok(data: booking.Id, id: booking.Id, message: "Booking confirmed successfully.");
@@ -198,6 +246,15 @@ namespace Bookify.Application.Services
             booking.Status = BookingStatus.Completed;
             await _bookingRepo.UpdateAsync(booking);
             await _bookingRepo.SaveChangesAsync();
+
+            // Notify the client that their booking is completed
+            await _notificationService.CreateAsync(
+                booking.ClientId,
+                "Booking Completed",
+                $"Your booking for '{booking.Service?.Name}' on {booking.Date:MMM dd, yyyy} has been completed. Feel free to leave a review!",
+                NotificationType.BookingStatusChanged,
+                booking.Id,
+                "/my-bookings");
 
             _logger.LogInformation($"Booking completed: {booking.Id}");
 
@@ -343,24 +400,25 @@ namespace Bookify.Application.Services
             // ── Periods ───────────────────────────────────────────────────────
             var end      = endDate   ?? DateTime.UtcNow;
             var start    = startDate ?? end.AddDays(-30);
-            var duration = end - start;
-            var prevStart = start - duration;
-            var prevEnd   = start;
+            var durationDays = (end.Date - start.Date).TotalDays + 1;
+            var prevStart = start.Date.AddDays(-durationDays);
+            var prevEnd   = start.Date.AddDays(-1);
 
             // ── Fetch bookings ────────────────────────────────────────────────
-            var currentBookings = (await _bookingRepo.GetAllAsync(start, end, null)).ToList();
-            var prevBookings    = (await _bookingRepo.GetAllAsync(prevStart, prevEnd, null)).ToList();
+            var currentBookings = (await _bookingRepo.GetAdminDashboardBookingsAsync(start, end)).ToList();
+            var prevBookings    = (await _bookingRepo.GetAdminDashboardBookingsAsync(prevStart, prevEnd)).ToList();
 
-            // ── 1. KPIs ───────────────────────────────────────────────────────
+            // ── Fetch ALL bookings (for all-time KPIs) has been replaced by optimized DB queries ──
+
+            // ── 1. KPIs (ALL-TIME, platform-wide) ─────────────────────────────
+            var allServices = (await _serviceRepo.GetAllAsync()).ToList();
             var stats = new AdminDashboardResponse
             {
-                TotalBookings    = currentBookings.Count,
-                PendingBookings  = currentBookings.Count(b => b.Status == BookingStatus.Pending),
-                ApprovedBookings = currentBookings.Count(b => b.Status == BookingStatus.Approved),
-                TotalRevenue     = currentBookings
-                    .Where(b => b.Status == BookingStatus.Completed || b.Status == BookingStatus.Approved)
-                    .Sum(b => (double)(b.Service?.Price ?? 0)),
-                TotalServices = (await _serviceRepo.GetAllAsync()).Count(s => !s.IsDeleted)
+                TotalBookings    = await _bookingRepo.GetCountAsync(),
+                PendingBookings  = await _bookingRepo.GetCountByStatusAsync(BookingStatus.Pending),
+                ApprovedBookings = await _bookingRepo.GetCountByStatusAsync(BookingStatus.Approved),
+                TotalRevenue     = await _bookingRepo.GetTotalPlatformRevenueAsync(),
+                TotalServices    = allServices.Count(s => !s.IsDeleted && s.IsActive)
             };
 
             // ── 2. Trends ─────────────────────────────────────────────────────
@@ -369,10 +427,12 @@ namespace Bookify.Application.Services
                 currentBookings.Count(b => b.Status == BookingStatus.Pending),
                 prevBookings.Count(b  => b.Status == BookingStatus.Pending));
             stats.TotalRevenueTrend = CalculateTrend(
-                stats.TotalRevenue,
+                currentBookings
+                    .Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Succeeded)
+                    .Sum(b => (double)b.Payment!.Amount),
                 prevBookings
-                    .Where(b => b.Status == BookingStatus.Completed || b.Status == BookingStatus.Approved)
-                    .Sum(b => (double)(b.Service?.Price ?? 0)));
+                    .Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Succeeded)
+                    .Sum(b => (double)b.Payment!.Amount));
 
             // ── 3. Charts ─────────────────────────────────────────────────────
             var now = DateTime.UtcNow;
@@ -381,7 +441,7 @@ namespace Bookify.Application.Services
                 var month      = now.AddMonths(-i);
                 var monthStart = new DateTime(month.Year, month.Month, 1);
                 var monthEnd   = monthStart.AddMonths(1).AddSeconds(-1);
-                var periodTotal = await _bookingRepo.GetAllAsync(monthStart, monthEnd, null);
+                var periodTotal = await _bookingRepo.GetAdminDashboardBookingsAsync(monthStart, monthEnd);
                 stats.BookingTrends.Add(new ChartDataPoint { Label = month.ToString("MMM"), Value = periodTotal.Count() });
             }
 
@@ -394,13 +454,14 @@ namespace Bookify.Application.Services
 
             // ── 4. Top Staff ──────────────────────────────────────────────────
             stats.TopStaff = currentBookings
+                .Where(b => b.Service?.Staff != null)
                 .GroupBy(b => new { b.Service.StaffId, b.Service.Staff.FullName, b.Service.Rating })
                 .Select(g => new StaffPerformanceDto
                 {
                     StaffId           = g.Key.StaffId,
                     StaffName         = g.Key.FullName,
                     CompletedBookings = g.Count(b => b.Status == BookingStatus.Completed),
-                    Revenue           = g.Sum(b => (double)b.Service.Price),
+                    Revenue           = g.Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Succeeded).Sum(b => (double)b.Payment!.Amount),
                     Rating            = g.Key.Rating
                 })
                 .OrderByDescending(x => x.Revenue)
@@ -415,15 +476,15 @@ namespace Bookify.Application.Services
                     ServiceId    = g.Key.ServiceId,
                     ServiceName  = g.Key.Name,
                     BookingCount = g.Count(),
-                    Revenue      = g.Sum(b => (double)b.Service.Price)
+                    Revenue      = g.Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Succeeded).Sum(b => (double)b.Payment!.Amount)
                 })
                 .OrderByDescending(x => x.BookingCount)
                 .Take(5)
                 .ToList();
 
-            // ── 6. Recent Bookings & Activity ─────────────────────────────────
-            stats.RecentBookings = _mapper.Map<List<BookingResponse>>(
-                currentBookings.OrderByDescending(b => b.Date).Take(10));
+            // ── 6. Recent Bookings & Activity (all-time most recent 10) ────────
+            var latestBookingsAllTime = await _bookingRepo.GetAllAsync(null, null, null, take: 10);
+            stats.RecentBookings = _mapper.Map<List<BookingResponse>>(latestBookingsAllTime);
             stats.RecentActivities = stats.RecentBookings.Take(5).Select(b => new RecentActivityDto
             {
                 Title       = $"{b.ServiceName} Booking",
@@ -438,7 +499,6 @@ namespace Bookify.Application.Services
             return ServiceResponse<AdminDashboardResponse>.Ok(stats);
         }
 
-        /// <inheritdoc/>
         public async Task<ServiceResponse<StaffDashboardResponse>> GetStaffDashboardAsync(
             Guid staffId,
             DateTime? startDate = null,
@@ -452,15 +512,25 @@ namespace Bookify.Application.Services
             // ── Periods ───────────────────────────────────────────────────────
             var end      = endDate   ?? DateTime.UtcNow;
             var start    = startDate ?? end.AddDays(-30);
-            var duration = end - start;
-            var prevStart = start - duration;
+            
+            var durationDays = (end.Date - start.Date).TotalDays + 1;
+            var prevStart = start.Date.AddDays(-durationDays);
+            var prevEnd   = start.Date.AddDays(-1);
 
             // ── Fetch bookings scoped to this staff member ─────────────────────
-            var allCurrent = (await _bookingRepo.GetAllAsync(start, end, null)).ToList();
-            var allPrev    = (await _bookingRepo.GetAllAsync(prevStart, start, null)).ToList();
+            var currentBookings = (await _bookingRepo.GetStaffDashboardBookingsAsync(staffId, start, end)).ToList();
+            var prevBookings    = (await _bookingRepo.GetStaffDashboardBookingsAsync(staffId, prevStart, prevEnd)).ToList();
 
-            var currentBookings = allCurrent.Where(b => b.Service?.StaffId == staffId).ToList();
-            var prevBookings    = allPrev.Where(b => b.Service?.StaffId == staffId).ToList();
+            // DIAGNOSTIC LOGS:
+            var allBookings = (await _bookingRepo.GetByStaffIdAsync(staffId, 0, 1000)).ToList();
+            var bookingDetails = string.Join(", ", allBookings.Select(b => $"{b.Date:yyyy-MM-dd} ({b.Status})"));
+            _logger.LogInformation(
+                $"Dashboard Diagnostics [StaffId: {staffId}]: " +
+                $"Current Period: {currentBookings.Count}, " +
+                $"Previous Period: {prevBookings.Count}, " +
+                $"All-Time Count: {allBookings.Count}, " +
+                $"Details: [{bookingDetails}], " +
+                $"Filter Range: {start:yyyy-MM-dd} to {end:yyyy-MM-dd}");
 
             // ── 1. KPIs ───────────────────────────────────────────────────────
             var stats = new StaffDashboardResponse
@@ -469,8 +539,15 @@ namespace Bookify.Application.Services
                 PendingBookings  = currentBookings.Count(b => b.Status == BookingStatus.Pending),
                 ApprovedBookings = currentBookings.Count(b => b.Status == BookingStatus.Approved),
                 TotalRevenue     = currentBookings
-                    .Where(b => b.Status == BookingStatus.Completed || b.Status == BookingStatus.Approved)
-                    .Sum(b => (double)(b.Service?.Price ?? 0))
+                    .Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Succeeded)
+                    .Sum(b => (double)b.Payment!.Amount),
+                ActiveClients    = allBookings.Select(b => b.ClientId).Distinct().Count(),
+                CompletionRate   = currentBookings.Count > 0 
+                    ? Math.Round((double)currentBookings.Count(b => b.Status == BookingStatus.Completed) / currentBookings.Count * 100, 1) 
+                    : 0,
+                CancellationRate = currentBookings.Count > 0 
+                    ? Math.Round((double)currentBookings.Count(b => b.Status == BookingStatus.Cancelled) / currentBookings.Count * 100, 1) 
+                    : 0
             };
 
             // ── 2. Trends ─────────────────────────────────────────────────────
@@ -478,12 +555,78 @@ namespace Bookify.Application.Services
             stats.TotalRevenueTrend  = CalculateTrend(
                 stats.TotalRevenue,
                 prevBookings
-                    .Where(b => b.Status == BookingStatus.Completed || b.Status == BookingStatus.Approved)
-                    .Sum(b => (double)(b.Service?.Price ?? 0)));
+                    .Where(b => b.Payment != null && b.Payment.Status == PaymentStatus.Succeeded)
+                    .Sum(b => (double)b.Payment!.Amount));
 
-            // ── 3. Recent Bookings & Activity ─────────────────────────────────
-            stats.RecentBookings = _mapper.Map<List<BookingResponse>>(
-                currentBookings.OrderByDescending(b => b.Date).Take(10));
+            // ── 3. Charts ─────────────────────────────────────────────────────
+            // Partition data based on the chosen range
+            var totalDays = (end.Date - start.Date).TotalDays + 1;
+
+            if (totalDays <= 1.1) // Day
+            {
+                stats.BookingTrends.Add(new ChartDataPoint { Label = "Morning", Value = currentBookings.Count(b => b.Time.Hours < 12) });
+                stats.BookingTrends.Add(new ChartDataPoint { Label = "Afternoon", Value = currentBookings.Count(b => b.Time.Hours >= 12 && b.Time.Hours < 17) });
+                stats.BookingTrends.Add(new ChartDataPoint { Label = "Evening", Value = currentBookings.Count(b => b.Time.Hours >= 17) });
+            }
+            else if (totalDays <= 10) // Week (usually 7 days)
+            {
+                for (int i = 0; i < totalDays; i++)
+                {
+                    var date = start.AddDays(i);
+                    var count = currentBookings.Count(b => b.Date.Date == date.Date);
+                    stats.BookingTrends.Add(new ChartDataPoint { Label = date.ToString("ddd"), Value = count });
+                }
+            }
+            else if (totalDays >= 28 && totalDays <= 31) // Month
+            {
+                // Custom 5-week breakdown: [1-7, 8-14, 15-21, 22-28, 29-end]
+                int[][] dayRanges = new int[][] {
+                    new[] {1, 7}, new[] {8, 14}, new[] {15, 21}, new[] {22, 28}, new[] {29, 31}
+                };
+
+                for (int i = 0; i < dayRanges.Length; i++)
+                {
+                    int startDay = dayRanges[i][0];
+                    int endDay = i == 4 ? DateTime.DaysInMonth(start.Year, start.Month) : dayRanges[i][1];
+                    
+                    if (startDay > endDay) continue;
+
+                    var count = currentBookings.Count(b => b.Date.Day >= startDay && b.Date.Day <= endDay);
+                    stats.BookingTrends.Add(new ChartDataPoint { Label = $"Week {i + 1}", Value = count });
+                }
+            }
+            else if (totalDays > 300) // Year
+            {
+                for (int m = 1; m <= 12; m++)
+                {
+                    var count = currentBookings.Count(b => b.Date.Month == m);
+                    stats.BookingTrends.Add(new ChartDataPoint 
+                    { 
+                        Label = new DateTime(start.Year, m, 1).ToString("MMM"), 
+                        Value = count 
+                    });
+                }
+            }
+            else // Fallback for other ranges
+            {
+                var pointCount = 6;
+                var intervalTicks = (end.Ticks - start.Ticks) / pointCount;
+                for (int i = 0; i < pointCount; i++)
+                {
+                    var pStart = start.AddTicks(intervalTicks * i);
+                    var pEnd = i == pointCount - 1 ? end : pStart.AddTicks(intervalTicks);
+                    var count = currentBookings.Count(b => b.Date.Date >= pStart.Date && b.Date.Date <= pEnd.Date);
+                    stats.BookingTrends.Add(new ChartDataPoint { Label = pStart.ToString("MMM dd"), Value = count });
+                }
+            }
+
+            // ── 4. Recent & Upcoming (Pending + Approved only) ─────────────────
+            var recentUpcoming = allBookings
+                .Where(b => b.Status == BookingStatus.Pending || b.Status == BookingStatus.Approved)
+                .OrderByDescending(b => b.Date)
+                .Take(10)
+                .ToList();
+            stats.RecentBookings = _mapper.Map<List<BookingResponse>>(recentUpcoming);
             stats.RecentActivities = stats.RecentBookings.Take(5).Select(b => new RecentActivityDto
             {
                 Title       = $"{b.ServiceName} Booking",
@@ -492,9 +635,8 @@ namespace Bookify.Application.Services
                 Type        = b.Status == "Pending" ? "Warning" : "Success"
             }).ToList();
 
-            // ── 4. Review Statistics ──────────────────────────────────────────
-            var staffService = (await _serviceRepo.GetAllAsync())
-                .FirstOrDefault(s => s.StaffId == staffId && !s.IsDeleted);
+            // ── 5. Review Statistics ──────────────────────────────────────────
+            var staffService = await _serviceRepo.GetByStaffIdAsync(staffId);
 
             if (staffService != null)
             {

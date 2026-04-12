@@ -49,5 +49,47 @@ namespace Bookify.API.Controllers
             var result = await _userService.GetClientReportAsync(id);
             return HandleResult(result);
         }
+
+        [HttpGet("admin-clients")]
+        [ProducesResponseType(typeof(ServiceResponse<PagedResult<AdminClientDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAdminClients(
+            [FromQuery] string? search = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var result = await _userService.GetAdminClientsAsync(search, page, pageSize);
+            return HandleResult(result);
+        }
+
+        [HttpGet("clients/{id}/admin-details")]
+        [ProducesResponseType(typeof(ServiceResponse<AdminClientDetailsDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetAdminClientDetails(Guid id)
+        {
+            var result = await _userService.GetAdminClientDetailsAsync(id);
+            return HandleResult(result);
+        }
+
+        // ── Admin Staff Members ────────────────────────────────────────────────
+
+        [HttpGet("admin-staff")]
+        [ProducesResponseType(typeof(ServiceResponse<PagedResult<AdminStaffDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAdminStaff(
+            [FromQuery] string? search = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var result = await _userService.GetAdminStaffAsync(search, page, pageSize);
+            return HandleResult(result);
+        }
+
+        [HttpGet("staff/{id}/admin-details")]
+        [ProducesResponseType(typeof(ServiceResponse<AdminStaffDetailsDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetAdminStaffDetails(Guid id)
+        {
+            var result = await _userService.GetAdminStaffDetailsAsync(id);
+            return HandleResult(result);
+        }
     }
 }

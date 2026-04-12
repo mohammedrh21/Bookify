@@ -1,0 +1,102 @@
+@inject INotificationApiService NotificationApiService
+@inject NotificationToastService CustomToastService
+@inject NotificationStateService StateService
+@implements IDisposable
+
+<div class="relative" id="notification-bell">
+    <!-- Bell Button -->
+    <button @onclick="TogglePanel"
+            class="relative p-2.5 rounded-2xl transition-all duration-300
+                   @(StateService.IsOpen 
+                        ? "bg-primary-100 text-primary-700 shadow-inner" 
+                        : "text-gray-400 hover:text-primary-500 hover:bg-gray-100/80")">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+
+        @if (_unreadCount > 0)
+        {
+            <span class="absolute top-1.5 right-1.5 flex items-center justify-center min-w-[20px] h-[20px] px-1.5
+                         bg-red-500 text-white text-[10px] font-black rounded-full border-2 border-white
+                         shadow-lg shadow-red-500/40 animate-pulse">
+                @(_unreadCount > 99 ? "99+" : _unreadCount.ToString())
+            </span>
+        }
+    </button>
+</div>
+
+@code {
+    [Parameter] public bool IsSidebarMode { get; set; } = false;
+
+    private int _unreadCount = 0;
+    private int _previousUnreadCount = -1;
+    private System.Threading.Timer? _pollTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        StateService.OnChange += HandleStateChange;
+        await FetchUnreadCount();
+        
+        // Start polling every 30 seconds
+        _pollTimer = new System.Threading.Timer(async _ => 
+        {
+            await InvokeAsync(async () => await FetchUnreadCount());
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private void HandleStateChange() => StateHasChanged();
+
+    private async Task FetchUnreadCount()
+    {
+        try
+        {
+            var result = await NotificationApiService.GetUnreadCountAsync();
+            if (result.Success)
+            {
+                _unreadCount = result.Data;
+                
+                // If count increased, show a floating toast
+                if (_previousUnreadCount != -1 && _unreadCount > _previousUnreadCount)
+                {
+                    await TriggerNewNotificationToast();
+                }
+                
+                _previousUnreadCount = _unreadCount;
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    private async Task TriggerNewNotificationToast()
+    {
+        try
+        {
+            // Fetch only the latest 1 notification
+            var result = await NotificationApiService.GetNotificationsAsync(pageNumber: 1, pageSize: 1);
+            if (result.Success && result.Data != null)
+            {
+                var latest = result.Data.FirstOrDefault();
+                if (latest != null)
+                {
+                    CustomToastService.Notify(latest.Title, latest.Message, latest.Type);
+                }
+            }
+        }
+        catch { }
+    }
+
+    private void TogglePanel()
+    {
+        StateService.Toggle(IsSidebarMode 
+            ? NotificationPanelMode.Sidebar 
+            : NotificationPanelMode.NavBar);
+    }
+
+    public void Dispose()
+    {
+        StateService.OnChange -= HandleStateChange;
+        _pollTimer?.Dispose();
+    }
+}

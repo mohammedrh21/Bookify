@@ -1,5 +1,6 @@
 @page "/my-bookings"
 @attribute [Authorize]
+@implements IDisposable
 
 @using Bookify.Client.Models.Common
 
@@ -24,7 +25,7 @@
     <div class="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit flex-wrap">
         @foreach (var tab in _tabs)
         {
-            <button @onclick="() => _activeTab = tab"
+            <button @onclick="() => SetTab(tab)"
                     class="px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap
                                    @(_activeTab == tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")">
                 @tab
@@ -40,11 +41,33 @@
         }
     </div>
 
+    <!-- Filters and Search -->
+    <div class="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+        <div class="relative w-full sm:w-96">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search text-gray-400"></i>
+            </div>
+            <input type="text"
+                   value="@_searchQuery"
+                   @oninput="OnSearchChanged"
+                   class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
+                   placeholder="Search by service name..." />
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500 font-medium whitespace-nowrap">Sort by Date:</span>
+            <select value="@_sortOrder" @onchange="SetSortOrder"
+                    class="block w-40 pl-3 pr-10 py-2 border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-xl transition-colors text-gray-700 font-medium shadow-sm">
+                <option value="@BookingSortOrder.NewestFirst">Newest First</option>
+                <option value="@BookingSortOrder.OldestFirst">Oldest First</option>
+            </select>
+        </div>
+    </div>
+
     @if (_loading)
     {
         <LoadingSpinner Message="Loading bookings..." />
     }
-    else if (FilteredBookings.Count == 0)
+    else if (_totalItems == 0)
     {
         <EmptyState Icon="📅" Title="No bookings found"
                     Message="@(_activeTab == "All" ? "You haven't made any bookings yet." : $"No {_activeTab.ToLower()} bookings.")"
@@ -52,39 +75,68 @@
     }
     else
     {
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            @foreach (var b in FilteredBookings.OrderByDescending(x => x.Date))
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            @foreach (var b in _paginatedBookings)
             {
                 <BookingCard Booking="b" OnCancel="() => ShowCancelModal(b.Id)" OnRate="ShowRatingModal" />
             }
         </div>
+
+        @if (_totalPages > 1)
+        {
+            <div class="flex items-center justify-between border border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-xl shadow-sm">
+                <div class="flex flex-1 justify-between sm:hidden">
+                    <button @onclick="PreviousPage" disabled="@(_currentPage == 1)"
+                            class="relative inline-flex items-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                        Previous
+                    </button>
+                    <button @onclick="NextPage" disabled="@(_currentPage == _totalPages)"
+                            class="relative ml-3 inline-flex items-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                        Next
+                    </button>
+                </div>
+                <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing <span class="font-medium">@(((_currentPage - 1) * PageSize) + 1)</span> to 
+                            <span class="font-medium">@Math.Min(_currentPage * PageSize, _totalItems)</span> of 
+                            <span class="font-medium">@_totalItems</span> results
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="isolate inline-flex -space-x-px rounded-xl shadow-sm" aria-label="Pagination">
+                            <button @onclick="PreviousPage" disabled="@(_currentPage == 1)"
+                                    class="relative inline-flex items-center rounded-l-xl px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50">
+                                <span class="sr-only">Previous</span>
+                                <i class="fas fa-chevron-left w-5 h-5 text-center leading-5"></i>
+                            </button>
+                            @for (int i = 1; i <= _totalPages; i++)
+                            {
+                                int pageNum = i;
+                                <button @onclick="() => _currentPage = pageNum"
+                                        class="relative inline-flex items-center px-4 py-2 text-sm font-semibold @(_currentPage == pageNum ? "bg-primary-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 z-10" : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50") focus:z-20 focus:outline-offset-0">
+                                    @pageNum
+                                </button>
+                            }
+                            <button @onclick="NextPage" disabled="@(_currentPage == _totalPages)"
+                                    class="relative inline-flex items-center rounded-r-xl px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50">
+                                <span class="sr-only">Next</span>
+                                <i class="fas fa-chevron-right w-5 h-5 text-center leading-5"></i>
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        }
     }
 </div>
 
 <!-- Cancel Confirmation Modal -->
 @if (_cancelModalVisible)
 {
-    <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 relative">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Cancel Booking</h2>
-            <p class="text-gray-500 mb-6">Are you sure you want to cancel this booking? This action cannot be undone.</p>
-            <div class="flex justify-end gap-3">
-                <button @onclick="ConfirmCancel"
-                        class="px-4 py-2 rounded-xl text-white bg-red-600 hover:bg-red-700 transition-colors">
-                    Yes, Cancel
-                </button>
-                <button @onclick="CloseCancelModal"
-                        class="px-4 py-2 rounded-xl text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
-                    No
-                </button>
-            </div>
-            <button @onclick="CloseCancelModal" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-            </button>
-        </div>
-    </div>
+    <Bookify.Client.Components.UI.Modals.CancelingModal 
+        OnConfirm="ConfirmCancel" 
+        OnCancel="CloseCancelModal" />
 }
 
 <!-- Rating Modal -->

@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Bookify.Application.Interfaces.Notification;
 
 namespace Bookify.Application.Services
 {
@@ -22,17 +23,20 @@ namespace Bookify.Application.Services
         private readonly IServiceService _serviceService;
         private readonly ICategoryRepository _categoryRepo;
         private readonly IMapper _mapper;
+        private readonly INotificationService _notificationService;
 
         public ServiceApprovalService(
             IServiceApprovalRepository approvalRepo,
             IServiceService serviceService,
             ICategoryRepository categoryRepo,
-            IMapper mapper)
+            IMapper mapper,
+            INotificationService notificationService)
         {
             _approvalRepo = approvalRepo;
             _serviceService = serviceService;
             _categoryRepo = categoryRepo;
             _mapper = mapper;
+            _notificationService = notificationService;
         }
 
         public async Task<ServiceResponse<Guid>> SubmitCreateRequestAsync(CreateServiceRequest request)
@@ -203,6 +207,15 @@ namespace Bookify.Application.Services
             await _approvalRepo.UpdateAsync(request);
             await _approvalRepo.SaveChangesAsync();
 
+            // Notify the staff member
+            await _notificationService.CreateAsync(
+                request.StaffId,
+                "Service Request Approved",
+                $"Your service request has been approved by an administrator.",
+                NotificationType.ServiceApproved,
+                request.ServiceId,
+                "/services/my-service");
+
             return ServiceResponse<Guid>.Ok(request.Id, "Request approved successfully.");
         }
 
@@ -227,6 +240,15 @@ namespace Bookify.Application.Services
 
             await _approvalRepo.UpdateAsync(request);
             await _approvalRepo.SaveChangesAsync();
+
+            // Notify the staff member
+            await _notificationService.CreateAsync(
+                request.StaffId,
+                "Service Request Rejected",
+                $"Your service request has been rejected.{(string.IsNullOrEmpty(comment) ? "" : $" Reason: {comment}")}",
+                NotificationType.ServiceRejected,
+                request.ServiceId,
+                "/services/my-service");
 
             return ServiceResponse<Guid>.Ok(request.Id, "Request rejected.");
         }

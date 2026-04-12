@@ -12,6 +12,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="FirebaseAdmin" Version="3.5.0" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.2">
 			<PrivateAssets>all</PrivateAssets>
@@ -28,10 +29,6 @@
 		<ProjectReference Include="..\Bookify.Application\Bookify.Application.csproj" />
 		<ProjectReference Include="..\Bookify.Infrastructure\Bookify.Infrastructure.csproj" />
 		<ProjectReference Include="..\Bookify.ServiceDefaults\Bookify.ServiceDefaults.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="logs\" />
 	</ItemGroup>
 
 </Project>

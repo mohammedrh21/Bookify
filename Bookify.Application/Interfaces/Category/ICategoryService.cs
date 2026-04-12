@@ -1,4 +1,4 @@
-﻿using Bookify.Application.Common;
+using Bookify.Application.Common;
 using Bookify.Application.DTO.Category;
 using Bookify.Application.DTO.Service;
 using System;
@@ -11,7 +11,7 @@ namespace Bookify.Application.Interfaces.Category
     {
         // Queries
         Task<ServiceResponse<CategoryResponse>> GetAsync(Guid id);
-        Task<ServiceResponse<IEnumerable<CategoryResponse>>> GetAllAsync();
+        Task<ServiceResponse<IEnumerable<CategoryResponse>>> GetAllAsync(int? limit = null);
 
         // Commands
         Task<ServiceResponse<Guid>> CreateAsync(CreateCategoryRequest request);

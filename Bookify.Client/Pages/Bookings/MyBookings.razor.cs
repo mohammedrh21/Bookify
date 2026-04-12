@@ -3,8 +3,15 @@ using Bookify.Client.Models.Booking;
 using Bookify.Client.Models.Common;
 using Bookify.Client.Models.Review;
 using Bookify.Client.Services;
+using System.Timers;
 
 namespace Bookify.Client.Pages.Bookings;
+
+public enum BookingSortOrder
+{
+    NewestFirst,
+    OldestFirst
+}
 
 public partial class MyBookings : ComponentBase
 {
@@ -29,9 +36,99 @@ public partial class MyBookings : ComponentBase
     private string _reviewComment = "";
     private bool _submittingReview = false;
 
-    private List<BookingModel> FilteredBookings => _activeTab == "All"
-        ? _bookings
-        : _bookings.Where(b => b.Status.Equals(_activeTab, StringComparison.OrdinalIgnoreCase)).ToList();
+    // Search, Sort, and Pagination Props
+    private string _searchQuery = "";
+    private BookingSortOrder _sortOrder = BookingSortOrder.NewestFirst;
+    private int _currentPage = 1;
+    private const int PageSize = 6;
+    private System.Timers.Timer? _searchDebounceTimer;
+
+    private List<BookingModel> _paginatedBookings = [];
+    private int _totalItems = 0;
+    private int _totalPages = 1;
+
+    private void ApplyFilters()
+    {
+        var query = _bookings.AsEnumerable();
+
+        if (_activeTab != "All")
+            query = query.Where(b => b.Status.Equals(_activeTab, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
+            query = query.Where(b => b.ServiceName != null && b.ServiceName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+        if (_sortOrder == BookingSortOrder.OldestFirst)
+            query = query.OrderBy(b => b.Date);
+        else
+            query = query.OrderByDescending(b => b.Date);
+
+        _totalItems = query.Count();
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_totalItems / (double)PageSize));
+
+        if (_currentPage > _totalPages)
+            _currentPage = Math.Max(1, _totalPages);
+
+        _paginatedBookings = query
+            .Skip((_currentPage - 1) * PageSize)
+            .Take(PageSize)
+            .ToList();
+    }
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+        _currentPage = 1;
+        ApplyFilters();
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        _searchQuery = e.Value?.ToString() ?? "";
+        _currentPage = 1;
+        
+        _searchDebounceTimer?.Stop();
+        _searchDebounceTimer?.Dispose();
+        
+        _searchDebounceTimer = new System.Timers.Timer(300);
+        _searchDebounceTimer.Elapsed += (s, ev) => 
+        {
+            InvokeAsync(() => 
+            {
+                ApplyFilters();
+                StateHasChanged();
+            });
+        };
+        _searchDebounceTimer.AutoReset = false;
+        _searchDebounceTimer.Start();
+    }
+
+    private void SetSortOrder(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<BookingSortOrder>(e.Value?.ToString(), out var result))
+        {
+            _sortOrder = result;
+            _currentPage = 1;
+            ApplyFilters();
+        }
+    }
+    
+    private void NextPage()
+    {
+        if (_currentPage < _totalPages)
+        {
+            _currentPage++;
+            ApplyFilters();
+        }
+    }
+
+    private void PreviousPage()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+            ApplyFilters();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -44,16 +141,17 @@ public partial class MyBookings : ComponentBase
                 if (result.Success)
                 {
                     _bookings = result.Data ?? [];
+                    ApplyFilters();
                 }
                 else
                 {
-                    ToastService.ShowError(result.Message ?? "Failed to load bookings.");
+                    // errors are already shown by BaseApiService
                 }
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while loading your bookings.");
+            // unexpected error
         }
         finally
         {
@@ -94,16 +192,20 @@ public partial class MyBookings : ComponentBase
             {
                 ToastService.ShowSuccess("Booking cancelled.");
                 var b = _bookings.FirstOrDefault(x => x.Id == id);
-                if (b is not null) b.Status = "Cancelled";
+                if (b is not null) 
+                {
+                    b.Status = "Cancelled";
+                    ApplyFilters();
+                }
             }
             else
             {
-                ToastService.ShowError(result.Message ?? "Failed to cancel booking.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while cancelling the booking.");
+            // unexpected error
         }
         finally
         {
@@ -145,20 +247,26 @@ public partial class MyBookings : ComponentBase
             if (result.Success)
             {
                 ToastService.ShowSuccess("Thank you for your review!");
+                _bookingToRate.IsReviewed = true;
                 CloseRatingModal();
             }
             else
             {
-                ToastService.ShowError(result.Message ?? "Failed to submit review.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while submitting your review.");
+            // unexpected error
         }
         finally
         {
             _submittingReview = false;
         }
+    }
+
+    public void Dispose()
+    {
+        _searchDebounceTimer?.Dispose();
     }
 }

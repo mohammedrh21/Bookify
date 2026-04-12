@@ -25,7 +25,7 @@ public partial class Home : ComponentBase
     {
         try
         {
-            var catTask = CategoryService.GetAllAsync();
+            var catTask = CategoryService.GetAllAsync(5);
             var svcTask = ServiceService.GetAllAsync();
 
             await Task.WhenAll(catTask, svcTask);

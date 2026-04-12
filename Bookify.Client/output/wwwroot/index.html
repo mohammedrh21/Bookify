@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bookify</title>
+    <base href="/" />
+
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://kit.fontawesome.com/377e7a6600.js" crossorigin="anonymous"></script>
+
+
+    <link rel="stylesheet" href="css/app.css" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+</head>
+
+<body class="bg-gray-50 antialiased">
+    <div id="app">
+        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100">
+            <div class="text-center">
+                <div
+                    class="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4 shadow-lg">
+                    <svg class="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-primary-800">Bookify</h1>
+                <p class="text-primary-500 mt-1 text-sm">Loading...</p>
+                <div class="mt-4 flex justify-center">
+                    <div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" class="fixed bottom-0 left-0 right-0 bg-red-600 text-white p-4 text-center hidden">
+        An unhandled error occurred.
+        <a href="" class="underline ml-2">Reload</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/chart-interop.js"></script>
+    <script src="_framework/blazor.webassembly.66stpp682q.js"></script>
+    <script src="js/firebaseInterop.js"></script>
+</body>
+
+</html>

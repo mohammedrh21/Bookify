@@ -1,0 +1,21 @@
+@using Bookify.Client.Components.Shared
+@using Bookify.Client.Components.Layout
+
+<div class="min-h-screen flex flex-col bg-gray-50">
+    <NavBar />
+
+    <main class="flex-1 w-full flex flex-col min-h-0 relative">
+        <div class="page-fade-in flex-1">
+            @ChildContent
+        </div>
+    </main>
+
+    <Footer />
+    <NotificationOverlay />
+    <FloatingToasts />
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

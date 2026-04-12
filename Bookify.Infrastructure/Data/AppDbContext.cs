@@ -28,6 +28,7 @@ namespace Bookify.Infrastructure.Data
         public DbSet<Review> Reviews { get; set; }
         public DbSet<ServiceApprovalRequest> ServiceApprovalRequests { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -95,8 +96,8 @@ namespace Bookify.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(r => r.Booking)
-                    .WithMany()
-                    .HasForeignKey(r => r.BookingId)
+                    .WithOne(b => b.Review)
+                    .HasForeignKey<Review>(r => r.BookingId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -140,10 +141,73 @@ namespace Bookify.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(p => p.Booking)
-                    .WithMany()
-                    .HasForeignKey(p => p.BookingId)
+                    .WithOne(b => b.Payment)
+                    .HasForeignKey<Payment>(p => p.BookingId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
+
+            // ================================
+            // Notification Configurations
+            // ================================
+            builder.Entity<Notification>(entity =>
+            {
+                entity.HasOne(n => n.User)
+                    .WithMany(u => u.Notifications)
+                    .HasForeignKey(n => n.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(n => new { n.UserId, n.CreatedAt })
+                    .HasDatabaseName("IX_Notifications_UserId_CreatedAt");
+            });
+
+        }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var result = await base.SaveChangesAsync(cancellationToken);
+            await UpdateServiceRatingsAsync();
+            return result;
+        }
+
+        private async Task UpdateServiceRatingsAsync()
+        {
+            // 1. Identify which services need an update, only if the Rating field was changed
+            var serviceIds = ChangeTracker.Entries<Review>()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Deleted || 
+                           (e.State == EntityState.Modified && e.Property(r => r.Rating).IsModified))
+                .Select(e => e.Entity.ServiceId)
+                .Distinct()
+                .ToList();
+
+            if (!serviceIds.Any()) return;
+
+            // 2. Perform a single grouped query to get Average and Count for all affected services at once
+            var ratings = await Reviews
+                .Where(r => serviceIds.Contains(r.ServiceId))
+                .GroupBy(r => r.ServiceId)
+                .Select(g => new
+                {
+                    ServiceId = g.Key,
+                    Average = g.Average(r => r.Rating),
+                    Count = g.Count()
+                })
+                .ToListAsync();
+
+            // 3. Update the corresponding Service entities
+            foreach (var serviceId in serviceIds)
+            {
+                var service = await Services.FindAsync(serviceId);
+                var ratingData = ratings.FirstOrDefault(r => r.ServiceId == serviceId);
+
+                if (service != null)
+                {
+                    service.Rating = ratingData?.Average ?? 0;
+                    service.ReviewCount = ratingData?.Count ?? 0;
+                }
+            }
+
+            // 4. Save the new denormalized values
+            await base.SaveChangesAsync();
         }
     }
 }

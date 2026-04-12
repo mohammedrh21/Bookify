@@ -20,6 +20,7 @@ namespace Bookify.Client.Models.Profile
         public string FullName { get; set; } = default!;
 
         [Required, Phone]
+        [StringLength(15, MinimumLength = 7, ErrorMessage = "Phone number must be between 7 and 15 characters.")]
         public string Phone { get; set; } = default!;
 
         public GenderType? Gender { get; set; }

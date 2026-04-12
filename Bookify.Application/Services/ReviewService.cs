@@ -9,6 +9,7 @@ using Bookify.Domain.Contracts.Service;
 using Bookify.Domain.Entities;
 using Bookify.Domain.Enums;
 using Bookify.Application.Interfaces.Auth;
+using Bookify.Application.Interfaces.Notification;
 using Bookify.Domain.Exceptions;
 
 namespace Bookify.Application.Services
@@ -20,19 +21,22 @@ namespace Bookify.Application.Services
         private readonly IServiceRepository _serviceRepository;
         private readonly IMapper _mapper;
         private readonly ICurrentUserService _currentUserService;
+        private readonly INotificationService _notificationService;
 
         public ReviewService(
             IReviewRepository reviewRepository, 
             IBookingRepository bookingRepository,
             IServiceRepository serviceRepository,
             IMapper mapper,
-            ICurrentUserService currentUserService)
+            ICurrentUserService currentUserService,
+            INotificationService notificationService)
         {
             _reviewRepository = reviewRepository;
             _bookingRepository = bookingRepository;
             _serviceRepository = serviceRepository;
             _mapper = mapper;
             _currentUserService = currentUserService;
+            _notificationService = notificationService;
         }
 
         public async Task<ServiceResponse<ReviewDto>> CreateReviewAsync(CreateReviewRequest request)
@@ -69,17 +73,20 @@ namespace Bookify.Application.Services
 
             await _reviewRepository.AddAsync(review);
 
-            // 5. Update Service Rating
+            await _reviewRepository.SaveChangesAsync();
+
+            // Notify the staff member about the new review
             var service = await _serviceRepository.GetByIdAsync(booking.ServiceId);
             if (service != null)
             {
-                var totalRatingValue = service.Rating * service.ReviewCount;
-                service.ReviewCount++;
-                service.Rating = (totalRatingValue + request.Rating) / service.ReviewCount;
-                await _serviceRepository.UpdateAsync(service);
+                await _notificationService.CreateAsync(
+                    service.StaffId,
+                    "New Review Received",
+                    $"A client has left a {request.Rating}-star review on your service '{service.Name}'.",
+                    Domain.Enums.NotificationType.NewReview,
+                    review.Id,
+                    "/staff/reviews");
             }
-
-            await _reviewRepository.SaveChangesAsync();
 
             var dto = _mapper.Map<ReviewDto>(review);
             return ServiceResponse<ReviewDto>.Ok(dto);

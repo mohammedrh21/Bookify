@@ -57,6 +57,10 @@ builder.Services.AddScoped<IUserApiService,         UserApiService>();
 builder.Services.AddScoped<IReviewApiService,       ReviewApiService>();
 builder.Services.AddScoped<IProfileApiService,      ProfileApiService>();
 builder.Services.AddScoped<IPaymentApiService,      PaymentApiService>();
+builder.Services.AddScoped<IStaffApiService,        StaffApiService>();
 builder.Services.AddScoped<ToastService>();
+builder.Services.AddScoped<INotificationApiService, NotificationApiService>();
+builder.Services.AddScoped<NotificationStateService>();
+builder.Services.AddScoped<NotificationToastService>();
 
 await builder.Build().RunAsync();

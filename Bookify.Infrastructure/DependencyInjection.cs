@@ -47,6 +47,9 @@ using Bookify.Application.Interfaces.Email;
 using Bookify.Infrastructure.Services.Email;
 using Bookify.Application.Interfaces.Payment;
 using Bookify.Infrastructure.Services.Payment;
+using Bookify.Domain.Contracts.Payment;
+using Bookify.Application.Interfaces.Notification;
+using Bookify.Infrastructure.Services.Notification;
 
 
 namespace Bookify.Infrastructure;
@@ -210,6 +213,8 @@ public static class DependencyInjection
         services.AddScoped<ITicketRepository, TicketRepository>();
         services.AddScoped<IContactInfoRepository, ContactInfoRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
     }
 
     // ============================
@@ -217,6 +222,7 @@ public static class DependencyInjection
     // ============================
     private static void AddApplicationServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddMemoryCache();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IIdentityUserService, IdentityUserService>();
@@ -231,6 +237,8 @@ public static class DependencyInjection
         
         services.Configure<StripeSettings>(configuration.GetSection("StripeSettings"));
         services.AddScoped<IPaymentService, StripePaymentService>();
+        
+        services.AddScoped<IFirebaseNotificationService, FirebaseNotificationService>();
     }
 
     // ============================

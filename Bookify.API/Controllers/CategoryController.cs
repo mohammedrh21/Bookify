@@ -33,14 +33,14 @@ namespace Bookify.API.Controllers
             return HandleResult(result);
         }
 
-        /// <summary>Get all active categories.</summary>
+        /// <summary>Get all active categories (optional limit).</summary>
         /// <response code="200">List of categories.</response>
         [HttpGet]
         [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] int? limit = null)
         {
-            var result = await _categoryService.GetAllAsync();
+            var result = await _categoryService.GetAllAsync(limit);
             return HandleResult(result);
         }
 

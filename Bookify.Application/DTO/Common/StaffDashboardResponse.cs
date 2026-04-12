@@ -15,10 +15,16 @@ namespace Bookify.Application.DTO.Common
         public int PendingBookings { get; set; }
         public int ApprovedBookings { get; set; }
         public double TotalRevenue { get; set; }
+        public double CompletionRate { get; set; }
+        public int ActiveClients { get; set; }
+        public double CancellationRate { get; set; }
 
         // ── Trends (% change vs previous period) ────────────────────────────
         public double TotalBookingsTrend { get; set; }
         public double TotalRevenueTrend { get; set; }
+
+        // ── Charts ──────────────────────────────────────────────────────────
+        public List<ChartDataPoint> BookingTrends { get; set; } = [];
 
         // ── Latest Activity ──────────────────────────────────────────────────
         public List<BookingResponse> RecentBookings { get; set; } = [];

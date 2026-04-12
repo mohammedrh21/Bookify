@@ -56,12 +56,12 @@ public partial class BookingDetails
             }
             else
             {
-                ToastService.ShowError(result.Message ?? "Failed to load booking details.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while loading booking details.");
+            // unexpected error
         }
         finally
         {
@@ -120,12 +120,12 @@ public partial class BookingDetails
             }
             else
             {
-                ToastService.ShowError(result.Message ?? "Failed to submit review.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while submitting your review.");
+            // unexpected error
         }
         finally
         {

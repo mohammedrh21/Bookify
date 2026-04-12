@@ -11,6 +11,8 @@ using Bookify.Infrastructure.Data;
 using Bookify.Infrastructure.Identity.Entity;
 using Microsoft.AspNetCore.Identity;
 using Bookify.Application.Interfaces.Email;
+using Microsoft.Extensions.Caching.Memory;
+using System.Security.Cryptography;
 
 namespace Bookify.Infrastructure.Services.Auth
 {
@@ -26,64 +28,116 @@ namespace Bookify.Infrastructure.Services.Auth
         private readonly IStaffRepository _staffRepo;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly IEmailSender _emailSender;
+        private readonly IMemoryCache _cache;
 
         public AuthService(
             UserManager<ApplicationIdentityUser> userManager,
             IClientRepository clientRepo,
             IStaffRepository staffRepo,
             IJwtTokenGenerator jwtTokenGenerator,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            IMemoryCache cache)
         {
             _userManager = userManager;
             _clientRepo = clientRepo;
             _staffRepo = staffRepo;
             _jwtTokenGenerator = jwtTokenGenerator;
             _emailSender = emailSender;
+            _cache = cache;
         }
 
         // ─────────────────────────────────────────────
         // Registration
         // ─────────────────────────────────────────────
 
-        /// <exception cref="ConflictException">When the email is already registered.</exception>
-        /// <exception cref="RegistrationFailedException">When ASP.NET Identity validation fails.</exception>
-        public async Task<ServiceResponse<Guid>> RegisterClientAsync(RegisterClientRequest request)
+        private class CachedRegistration
         {
-            var identityUserId = await CreateIdentityUserAsync(request, Roles.Client);
-
-            var client = new Client
-            {
-                Id = identityUserId,
-                FullName = request.FullName,
-                Phone = request.Phone,
-                DateOfBirth = request.DateOfBirth
-            };
-
-            await _clientRepo.AddAsync(client);
-
-            return ServiceResponse<Guid>.Ok(
-                id: client.Id,
-                message: "Client registered successfully.");
+            public RegisterClientRequest? ClientRequest { get; set; }
+            public RegisterStaffRequest? StaffRequest { get; set; }
+            public string Otp { get; set; } = string.Empty;
         }
 
-        /// <exception cref="ConflictException">When the email is already registered.</exception>
-        /// <exception cref="RegistrationFailedException">When ASP.NET Identity validation fails.</exception>
-        public async Task<ServiceResponse<Guid>> RegisterStaffAsync(RegisterStaffRequest request)
+        private async Task<ServiceResponse<bool>> InitiateRegistrationAsync(
+            string email, string otp, CachedRegistration cachedRegistration)
         {
-            var identityUserId = await CreateIdentityUserAsync(request, Roles.Staff);
+            var existingUser = await _userManager.FindByEmailAsync(email);
+            if (existingUser is not null)
+                throw new ConflictException($"An account with email '{email}' already exists.");
 
-            var staff = new Staff
+            var cacheKey = $"Registration_OTP_{email.ToLower()}";
+            _cache.Set(cacheKey, cachedRegistration, TimeSpan.FromMinutes(5));
+
+            var subject = "Your Registration OTP";
+            var message = $"<p>Your OTP for completing registration is: <strong>{otp}</strong></p><p>This OTP will expire in 5 minutes.</p>";
+
+            await _emailSender.SendEmailAsync(email, subject, message);
+
+            return ServiceResponse<bool>.Ok(true, "OTP sent to your email. Please verify to complete registration.");
+        }
+
+        public async Task<ServiceResponse<bool>> InitiateRegisterClientAsync(RegisterClientRequest request)
+        {
+            var otp = GenerateOtp();
+            var cacheModel = new CachedRegistration { ClientRequest = request, Otp = otp };
+            return await InitiateRegistrationAsync(request.Email, otp, cacheModel);
+        }
+
+        public async Task<ServiceResponse<bool>> InitiateRegisterStaffAsync(RegisterStaffRequest request)
+        {
+            var otp = GenerateOtp();
+            var cacheModel = new CachedRegistration { StaffRequest = request, Otp = otp };
+            return await InitiateRegistrationAsync(request.Email, otp, cacheModel);
+        }
+
+        /// <summary>Generates a cryptographically random 6-digit OTP.</summary>
+        private static string GenerateOtp()
+            => RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+
+        public async Task<ServiceResponse<Guid>> VerifyRegistrationOtpAsync(VerifyRegistrationOtpRequest request)
+        {
+            var cacheKey = $"Registration_OTP_{request.Email.ToLower()}";
+            if (!_cache.TryGetValue<CachedRegistration>(cacheKey, out var cachedRegistration) || cachedRegistration is null)
+                throw new BusinessRuleException("Registration session expired or does not exist. Please register again.");
+
+            if (cachedRegistration.Otp != request.Otp)
+                throw new BusinessRuleException("Invalid OTP.");
+
+            Guid userId;
+            try
             {
-                Id = identityUserId,
-                FullName = request.FullName,
-                Phone = request.Phone
-            };
+                if (cachedRegistration.ClientRequest is { } clientReq)
+                {
+                    userId = await CreateIdentityUserAsync(clientReq, Roles.Client);
+                    await _clientRepo.AddAsync(new Client
+                    {
+                        Id          = userId,
+                        FullName    = clientReq.FullName,
+                        Phone       = clientReq.Phone,
+                        DateOfBirth = clientReq.DateOfBirth
+                    });
+                }
+                else if (cachedRegistration.StaffRequest is { } staffReq)
+                {
+                    userId = await CreateIdentityUserAsync(staffReq, Roles.Staff);
+                    await _staffRepo.AddAsync(new Staff
+                    {
+                        Id       = userId,
+                        FullName = staffReq.FullName,
+                        Phone    = staffReq.Phone
+                    });
+                }
+                else
+                {
+                    throw new BusinessRuleException("Corrupted registration session. Please register again.");
+                }
+            }
+            finally
+            {
+                // Always evict from cache — prevents re-use of a consumed or failed OTP
+                _cache.Remove(cacheKey);
+            }
 
-            await _staffRepo.AddAsync(staff);
-
-            return ServiceResponse<Guid>.Ok(
-                id: staff.Id,
-                message: "Staff registered successfully.");
+            return ServiceResponse<Guid>.Ok(userId, "Registration completed successfully.");
         }
 
         // ─────────────────────────────────────────────
@@ -206,17 +260,13 @@ namespace Bookify.Infrastructure.Services.Auth
         /// <exception cref="RegistrationFailedException">When Identity reports validation errors.</exception>
         private async Task<Guid> CreateIdentityUserAsync(RegisterBaseRequest request, string role)
         {
-            var existingUser = await _userManager.FindByEmailAsync(request.Email);
-            if (existingUser is not null)
-                throw new ConflictException($"An account with email '{request.Email}' already exists.");
-
             var user = new ApplicationIdentityUser
             {
-                UserName = request.Email,
-                Email = request.Email,
-                PhoneNumber = request.Phone,
-                FullName = request.FullName,
-                EmailConfirmed = false
+                UserName      = request.Email,
+                Email         = request.Email,
+                PhoneNumber   = request.Phone,
+                FullName      = request.FullName,
+                EmailConfirmed = true   // OTP already verified — email is confirmed
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);

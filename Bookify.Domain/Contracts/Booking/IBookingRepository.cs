@@ -22,6 +22,9 @@ namespace Bookify.Domain.Contracts.Booking
             int take = 10);
         Task<IEnumerable<Domain.Entities.Booking>> GetByServiceIdAsync(Guid serviceId, DateTime from, DateTime to);
 
+        Task<IEnumerable<Domain.Entities.Booking>> GetStaffDashboardBookingsAsync(Guid staffId, DateTime from, DateTime to);
+        Task<IEnumerable<Domain.Entities.Booking>> GetAdminDashboardBookingsAsync(DateTime? from, DateTime? to);
+
         Task<IEnumerable<Domain.Entities.Booking>> GetAllAsync(
             DateTime? from,
             DateTime? to,
@@ -49,6 +52,7 @@ namespace Bookify.Domain.Contracts.Booking
 
         Task<int> GetCountByStatusAsync(BookingStatus status, Guid? staffId = null);
         Task<double> GetTotalRevenueAsync(Guid? staffId = null);
+        Task<double> GetTotalPlatformRevenueAsync();
         
         Task SaveChangesAsync();
     }

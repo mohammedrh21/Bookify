@@ -40,7 +40,7 @@
                class="px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors">
                 Details
             </a>
-            @if (Booking.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+            @if (Booking.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) && !Booking.IsReviewed)
             {
                 <button @onclick="() => OnRate.InvokeAsync(Booking)"
                         class="px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">

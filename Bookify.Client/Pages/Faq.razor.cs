@@ -37,12 +37,12 @@ public partial class Faq : ComponentBase
             }
             else
             {
-                ToastService.ShowError("Failed to load FAQs.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while loading FAQs.");
+            // unexpected error
         }
         finally
         {

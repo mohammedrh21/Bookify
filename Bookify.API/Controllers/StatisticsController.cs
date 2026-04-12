@@ -30,7 +30,7 @@ namespace Bookify.API.Controllers
             [FromQuery] DateTime? to = null)
         {
             var result = await _bookingService.GetAdminDashboardAsync(from, to);
-            return HandleResult(result, unwrapData: true);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace Bookify.API.Controllers
                 return Unauthorized(new { error = "Invalid staff identity." });
 
             var result = await _bookingService.GetStaffDashboardAsync(staffId, from, to);
-            return HandleResult(result, unwrapData: true);
+            return HandleResult(result);
         }
     }
 }

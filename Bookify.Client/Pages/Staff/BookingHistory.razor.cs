@@ -65,7 +65,7 @@ public partial class BookingHistory : ComponentBase
                 }
                 else
                 {
-                    ToastService.ShowError(result.Message ?? "Failed to load bookings.");
+                    // errors are already shown by BaseApiService
                     _bookings = [];
                     _totalPages = 1;
                     _totalCount = 0;
@@ -74,7 +74,7 @@ public partial class BookingHistory : ComponentBase
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while loading bookings.");
+            // unexpected error
             _bookings = [];
             _totalPages = 1;
             _totalCount = 0;
@@ -176,9 +176,9 @@ public partial class BookingHistory : ComponentBase
                 ToastService.ShowSuccess("Booking approved.");
                 await LoadBookingsAsync();
             }
-            else ToastService.ShowError(result.Message ?? "Failed to approve booking.");
+            else { /* errors are already shown by BaseApiService */ }
         }
-        catch (Exception) { ToastService.ShowError("An unexpected error occurred."); }
+        catch (Exception) { /* unexpected error */ }
     }
 
     private async Task Reject(Guid id)
@@ -191,9 +191,9 @@ public partial class BookingHistory : ComponentBase
                 ToastService.ShowSuccess("Booking rejected.");
                 await LoadBookingsAsync();
             }
-            else ToastService.ShowError(result.Message ?? "Failed to reject booking.");
+            else { /* errors are already shown by BaseApiService */ }
         }
-        catch (Exception) { ToastService.ShowError("An unexpected error occurred."); }
+        catch (Exception) { /* unexpected error */ }
     }
 
     private async Task Complete(Guid id)
@@ -206,25 +206,11 @@ public partial class BookingHistory : ComponentBase
                 ToastService.ShowSuccess("Booking marked as completed.");
                 await LoadBookingsAsync();
             }
-            else ToastService.ShowError(result.Message ?? "Failed to complete booking.");
+            else { /* errors are already shown by BaseApiService */ }
         }
-        catch (Exception) { ToastService.ShowError("An unexpected error occurred."); }
+        catch (Exception) { /* unexpected error */ }
     }
 
-    private async Task Cancel(Guid id)
-    {
-        try
-        {
-            var result = await BookingService.CancelAsync(id, (await AuthService.GetUserIdAsync()) ?? Guid.Empty, "Staff");
-            if (result.Success)
-            {
-                ToastService.ShowSuccess("Booking cancelled.");
-                await LoadBookingsAsync();
-            }
-            else ToastService.ShowError(result.Message ?? "Failed to cancel booking.");
-        }
-        catch (Exception) { ToastService.ShowError("An unexpected error occurred."); }
-    }
 
     private string GetInitials(string name)
     {

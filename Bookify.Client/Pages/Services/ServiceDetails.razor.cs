@@ -52,22 +52,17 @@ public partial class ServiceDetails
             }
             else
             {
-                ToastService.ShowError(svcResult.Message ?? "Failed to load service details.");
+                // errors are already shown by BaseApiService
             }
 
             if (revResult.Success)
             {
                 _reviews = revResult.Data?.Items.ToList();
             }
-            else
-            {
-                // Optionally suppress toast for review load failure if it's non-critical
-                Console.WriteLine(revResult.Message ?? "Failed to load reviews.");
-            }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while loading service details.");
+            // unexpected error
         }
 
         await CheckEligibility();
@@ -104,7 +99,8 @@ public partial class ServiceDetails
         {
             var booking = bookingsResult.Data.FirstOrDefault(b =>
                 b.ServiceId == Id &&
-                b.Status == "Completed");
+                b.Status == "Completed" && 
+                !b.IsReviewed);
 
             if (booking != null)
             {
@@ -134,12 +130,12 @@ public partial class ServiceDetails
             }
             else
             {
-                ToastService.ShowError(result.Message ?? "Failed to submit review.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while submitting the review.");
+            // unexpected error
         }
         finally
         {

@@ -22,39 +22,12 @@
             <div class="hidden md:flex items-center gap-6">
                 <AuthorizeView>
                     <Authorized>
-                        <AuthorizeView Roles="Client" Context="clientContext">
-                            <Authorized>
-                                <NavLink href="/" Match="NavLinkMatch.All" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Home</NavLink>
-                                <NavLink href="/services" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Services</NavLink>
-                                <NavLink href="/my-bookings" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">My Bookings</NavLink>
-                                <NavLink href="/about" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">About</NavLink>
-                                <NavLink href="/contact" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Reach Us</NavLink>
-                                <NavLink href="/faq" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">FAQs</NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-
-                        <AuthorizeView Roles="Admin" Context="adminContext">
-                            <Authorized>
-                                <NavLink href="/admin/dashboard" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Dashboard</NavLink>
-                                <NavLink href="/admin/categories" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Categories</NavLink>
-                                <NavLink href="/admin/bookings" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Supervise Bookings</NavLink>
-                                <NavLink href="/admin/staff" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Manage Staff</NavLink>
-                                <NavLink href="/admin/clients" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Clients</NavLink>
-                                <NavLink href="/admin/services" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Services</NavLink>
-                                <NavLink href="/admin/service-approvals" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Service Approvals</NavLink>
-                                <NavLink href="/admin/tickets" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Tickets</NavLink>
-                                <NavLink href="/admin/faqs" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">FAQs</NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-
-                        <AuthorizeView Roles="Staff" Context="staffContext">
-                            <Authorized>
-                                <NavLink href="/staff/dashboard" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">My Dashboard</NavLink>
-                                <NavLink href="/booking/service-bookings" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Bookings History</NavLink>
-                                <NavLink href="/services/my-service" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">My Service</NavLink>
-                                <NavLink href="/staff/reviews" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Service Reviews</NavLink>
-                            </Authorized>
-                        </AuthorizeView>
+                        <NavLink href="/" Match="NavLinkMatch.All" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Home</NavLink>
+                        <NavLink href="/services" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Services</NavLink>
+                        <NavLink href="/my-bookings" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">My Bookings</NavLink>
+                        <NavLink href="/about" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">About</NavLink>
+                        <NavLink href="/contact" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Reach Us</NavLink>
+                        <NavLink href="/faq" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">FAQs</NavLink>
                     </Authorized>
                     <NotAuthorized>
                         <NavLink href="/" Match="NavLinkMatch.All" class="text-gray-600 hover:text-primary-600 font-medium text-sm transition-colors" ActiveClass="text-primary-600 font-semibold">Home</NavLink>
@@ -70,6 +43,8 @@
             <div class="flex items-center gap-4">
                 <AuthorizeView>
                     <Authorized>
+                        <div class="flex items-center gap-2">
+                            <Bookify.Client.Components.Shared.NotificationBell />
                         <div class="relative">
                             <button @onclick="ToggleMenu"
                                     class="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary-50 hover:bg-primary-100 transition-colors">
@@ -91,6 +66,14 @@
                                         <i class="fas fa-user-circle"></i>
                                         My Profile
                                     </a>
+                                    @if (_userRole == "Client")
+                                    {
+                                        <a href="/profile/change-password"
+                                           class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                            <i class="fas fa-shield-alt text-amber-500"></i>
+                                            Change Password
+                                        </a>
+                                    }
                                     <div class="border-t border-gray-50 my-1"></div>
                                     <button @onclick="Logout"
                                             class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
@@ -99,6 +82,7 @@
                                     </button>
                                 </div>
                             }
+                        </div>
                         </div>
                     </Authorized>
                     <NotAuthorized>
@@ -134,32 +118,18 @@
             <div class="md:hidden border-t border-gray-100 py-4 space-y-1">
                 <AuthorizeView>
                     <Authorized>
-                        <AuthorizeView Roles="Client" Context="mClient">
-                            <Authorized>
-                                <a href="/" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Home</a>
-                                <a href="/services" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Services</a>
-                                <a href="/my-bookings" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">My Bookings</a>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Admin" Context="mAdmin">
-                            <Authorized>
-                                <a href="/admin/dashboard" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Dashboard</a>
-                                <a href="/admin/bookings" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Bookings</a>
-                                <a href="/admin/staff" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Staff</a>
-                                <a href="/admin/clients" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Clients</a>
-                                <a href="/admin/service-approvals" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Service Approvals</a>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Staff" Context="mStaff">
-                            <Authorized>
-                                <a href="/staff/dashboard" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Dashboard</a>
-                                <a href="/booking/service-bookings" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Bookings</a>
-                                <a href="/staff/reviews" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Reviews</a>
-                            </Authorized>
-                        </AuthorizeView>
+                        <a href="/" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Home</a>
+                        <a href="/services" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">Services</a>
+                        <a href="/my-bookings" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">My Bookings</a>
                         <a href="@_profileRoute" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">
                             <i class="fas fa-user-circle mr-2 text-gray-400"></i>My Profile
                         </a>
+                        @if (_userRole == "Client")
+                        {
+                            <a href="/profile/change-password" class="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-primary-50 rounded-xl">
+                                <i class="fas fa-shield-alt mr-2 text-amber-500"></i>Change Password
+                            </a>
+                        }
                         <button @onclick="Logout" class="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl">Logout</button>
                     </Authorized>
                     <NotAuthorized>
@@ -177,12 +147,12 @@
     private bool _menuOpen = false;
     private bool _mobileMenuOpen = false;
     private string _userName = string.Empty;
+    private string _userRole = string.Empty;
     private string _profileRoute = "/";
 
     protected override async Task OnInitializedAsync()
     {
         await UpdateUserInfo();
-        // Subscribe to auth state changes if needed, or just refresh on render
     }
 
     private async Task UpdateUserInfo()
@@ -192,6 +162,7 @@
         {
             _userName = await localStorage.GetItemAsync<string>("user_name") ?? "User";
             var role = await AuthService.GetUserRoleAsync();
+            _userRole = role ?? string.Empty;
             _profileRoute = role switch
             {
                 "Admin"  => "/admin/profile",

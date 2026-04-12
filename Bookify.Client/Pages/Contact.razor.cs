@@ -23,12 +23,12 @@ public partial class Contact : ComponentBase
             }
             else
             {
-                ToastService.ShowError("Failed to load contact info.");
+                // errors are already shown by BaseApiService
             }
         }
         catch (Exception)
         {
-            ToastService.ShowError("An unexpected error occurred while loading contact info.");
+            // unexpected error
         }
         finally
         {

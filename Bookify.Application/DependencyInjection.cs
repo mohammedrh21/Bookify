@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IContactInfoService, ContactInfoService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<Interfaces.Notification.INotificationService, NotificationService>();
     }
 
     private static void AddValidation(IServiceCollection services)

@@ -75,7 +75,6 @@ namespace Bookify.Application.Services.Users
             bool foundAndToggled = false;
             bool newStatus = false;
 
-            // Toggle in Identity User via Identity Service
             var identityResult = await _identityUserService.ToggleUserActiveAsync(id);
 
             var client = await _clientRepository.GetByIdAsync(id);
@@ -134,6 +133,86 @@ namespace Bookify.Application.Services.Users
             };
 
             return ServiceResponse<ClientReportDto>.Ok(report);
+        }
+
+        public async Task<ServiceResponse<PagedResult<StaffClientDto>>> GetStaffClientsAsync(
+            Guid staffId, string? search, DateTime? dateFilter, int page, int pageSize)
+        {
+            var (items, totalCount) = await _clientRepository.GetStaffClientsPaginatedAsync(staffId, search, dateFilter, page, pageSize);
+
+            return ServiceResponse<PagedResult<StaffClientDto>>.Ok(new PagedResult<StaffClientDto>
+            {
+                Items = items.ToList(),
+                TotalCount = totalCount,
+                PageNumber = page,
+                PageSize = pageSize
+            });
+        }
+
+        public async Task<ServiceResponse<StaffClientDetailsDto>> GetStaffClientDetailsAsync(Guid staffId, Guid clientId)
+        {
+            var result = await _clientRepository.GetStaffClientDetailsAsync(staffId, clientId);
+
+            if (result == null)
+            {
+                return ServiceResponse<StaffClientDetailsDto>.Fail("Client not found or hasn't booked with this staff member.");
+            }
+
+            return ServiceResponse<StaffClientDetailsDto>.Ok(result);
+        }
+
+        public async Task<ServiceResponse<PagedResult<AdminClientDto>>> GetAdminClientsAsync(
+            string? search, int page, int pageSize)
+        {
+            var (items, totalCount) = await _clientRepository.GetAdminClientsPaginatedAsync(search, page, pageSize);
+
+            return ServiceResponse<PagedResult<AdminClientDto>>.Ok(new PagedResult<AdminClientDto>
+            {
+                Items = items.ToList(),
+                TotalCount = totalCount,
+                PageNumber = page,
+                PageSize = pageSize
+            });
+        }
+
+        public async Task<ServiceResponse<AdminClientDetailsDto>> GetAdminClientDetailsAsync(Guid clientId)
+        {
+            var result = await _clientRepository.GetAdminClientDetailsAsync(clientId);
+
+            if (result == null)
+            {
+                return ServiceResponse<AdminClientDetailsDto>.Fail("Client not found.");
+            }
+
+            return ServiceResponse<AdminClientDetailsDto>.Ok(result);
+        }
+
+        // ── Admin Staff Members ────────────────────────────────────────────────
+
+        public async Task<ServiceResponse<PagedResult<AdminStaffDto>>> GetAdminStaffAsync(
+            string? search, int page, int pageSize)
+        {
+            var (items, totalCount) = await _staffRepository.GetAdminStaffPaginatedAsync(search, page, pageSize);
+
+            return ServiceResponse<PagedResult<AdminStaffDto>>.Ok(new PagedResult<AdminStaffDto>
+            {
+                Items = items.ToList(),
+                TotalCount = totalCount,
+                PageNumber = page,
+                PageSize = pageSize
+            });
+        }
+
+        public async Task<ServiceResponse<AdminStaffDetailsDto>> GetAdminStaffDetailsAsync(Guid staffId)
+        {
+            var result = await _staffRepository.GetAdminStaffDetailsAsync(staffId);
+
+            if (result == null)
+            {
+                return ServiceResponse<AdminStaffDetailsDto>.Fail("Staff member not found.");
+            }
+
+            return ServiceResponse<AdminStaffDetailsDto>.Ok(result);
         }
     }
 }

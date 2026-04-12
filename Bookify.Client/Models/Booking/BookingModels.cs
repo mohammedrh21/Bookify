@@ -15,6 +15,8 @@ public class BookingModel
     public decimal  Price           { get; set; }
     public int      DurationMinutes { get; set; }
     public string?  CategoryName    { get; set; }   // Added: matches BookingResponse.CategoryName
+    public string   PaymentStatus   { get; set; } = "Pending";
+    public bool     IsReviewed      { get; set; }
 }
 
 
