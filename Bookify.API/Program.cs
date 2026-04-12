@@ -291,7 +291,10 @@ app.MapControllers();
 try
 {
     Log.Information("Starting Bookify API");
-    app.Run();
+    
+    // Explicitly listen on the port provided by Render
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    app.Run($"http://0.0.0.0:{port}");
 }
 catch (Exception ex)
 {

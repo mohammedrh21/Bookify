@@ -1,0 +1,15 @@
+**/.dockerignore
+**/.git
+**/.github
+**/.vs
+**/.vscode
+**/.slnLaunch.user
+**/bin
+**/obj
+**/out
+**/output
+README.md
+Dockerfile
+.env
+*.db
+*.log
