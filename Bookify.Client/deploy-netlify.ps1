@@ -13,7 +13,7 @@ if (-not $siteId) { $siteId = "967a94f3-a504-4470-8008-18bdb00f1f11" }
 
 $authToken = $env:NETLIFY_AUTH_TOKEN
 $apiBaseUrl = $env:API_BASE_URL
-if (-not $apiBaseUrl) { $apiBaseUrl = "https://bookify-dev.runasp.net/" }
+if (-not $apiBaseUrl) { $apiBaseUrl = "https://bookify-api-4oeq.onrender.com/" }
 
 Write-Host "==> Preparing Configuration..." -ForegroundColor Cyan
 
