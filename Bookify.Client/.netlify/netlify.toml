@@ -1,17 +1,16 @@
-headersOrigin = "config"
-redirectsOrigin = "config"
 plugins = []
+headers = []
 
 [functions]
 
 [functions."*"]
 
 [build]
-publish = "C:\\Users\\moham\\source\\repos\\Bookify\\Bookify.Client\\output\\wwwroot"
+publish = "C:\\Users\\moham\\source\\repos\\Bookify\\Bookify.Client\\release\\wwwroot"
 publishOrigin = "config"
 commandOrigin = "config"
 base = "C:\\Users\\moham\\source\\repos\\Bookify\\Bookify.Client"
-command = "dotnet publish -c Release -o output"
+command = "dotnet publish -c Release -o release"
 
 [build.environment]
 
@@ -26,60 +25,6 @@ command = "dotnet publish -c Release -o output"
 [build.processing.js]
 
 [build.services]
-
-[[headers]]
-for = "/*"
-
-[headers.values]
-X-Content-Type-Options = "nosniff"
-
-[[headers]]
-for = "/_framework/*"
-
-[headers.values]
-Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-for = "/**/*.wasm"
-
-[headers.values]
-Content-Type = "application/wasm"
-
-[[headers]]
-for = "/**/*.js"
-
-[headers.values]
-Content-Type = "application/javascript"
-
-[[headers]]
-for = "/**/*.json"
-
-[headers.values]
-Content-Type = "application/json"
-
-[[headers]]
-for = "/**/*.br"
-
-[headers.values]
-Content-Encoding = "br"
-
-[[headers]]
-for = "/**/*.gz"
-
-[headers.values]
-Content-Encoding = "gzip"
-
-[[redirects]]
-from = "/api/*"
-to = "https://bookify-api-4oeq.onrender.com/api/:splat"
-status = 200.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
 
 [[redirects]]
 from = "/*"

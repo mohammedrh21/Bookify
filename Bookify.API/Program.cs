@@ -157,7 +157,7 @@ builder.Services.AddCors(options =>
     {
         var allowedOrigins = builder.Configuration
             .GetSection("AllowedOrigins")
-            .Get<string[]>() ?? new[] { "https://localhost:5138", "https://bookify-demo-dev.netlify.app/", "http://localhost:5138" };
+            .Get<string[]>() ?? new[] { "https://localhost:5138", "https://bookify-demo-dev.netlify.app", "http://localhost:5138" };
 
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
