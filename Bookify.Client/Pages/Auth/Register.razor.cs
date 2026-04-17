@@ -23,7 +23,33 @@ public partial class Register : ComponentBase
 
     // Country Picker State
     private CountryModel _selectedCountry = CountryData.Countries.FirstOrDefault(c => c.Iso3Code == "SAU") ?? CountryData.Countries.First();
-    private string _phoneNumber = string.Empty;
+    private string _phoneNumber
+    {
+        get => _internalPhoneNumber;
+        set
+        {
+            _internalPhoneNumber = value;
+            UpdateModelPhone();
+        }
+    }
+    private string _internalPhoneNumber = string.Empty;
+
+    private void UpdateModelPhone()
+    {
+        if (!string.IsNullOrWhiteSpace(_internalPhoneNumber))
+        {
+            var cleanPhone = _internalPhoneNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "");
+            if (cleanPhone.StartsWith("0"))
+            {
+                cleanPhone = cleanPhone[1..];
+            }
+            _model.Phone = $"{_selectedCountry.DialCode}{cleanPhone}";
+        }
+        else
+        {
+            _model.Phone = string.Empty;
+        }
+    }
 
     private void TogglePassword() => _showPassword = !_showPassword;
 
@@ -47,6 +73,7 @@ public partial class Register : ComponentBase
     private void HandleCountrySelected(CountryModel country)
     {
         _selectedCountry = country;
+        UpdateModelPhone();
         StateHasChanged();
     }
 
@@ -56,20 +83,6 @@ public partial class Register : ComponentBase
     /// </summary>
     private async Task HandleRegister()
     {
-        // Combine Dial Code and Phone Number
-        if (!string.IsNullOrWhiteSpace(_phoneNumber))
-        {
-            var cleanPhone = _phoneNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "");
-            
-            // Remove leading zero if present (standard international practice)
-            if (cleanPhone.StartsWith("0"))
-            {
-                cleanPhone = cleanPhone[1..];
-            }
-            
-            _model.Phone = $"{_selectedCountry.DialCode}{cleanPhone}";
-        }
-
         _error = string.Empty;
         _loading = true;
         StateHasChanged();

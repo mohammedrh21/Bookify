@@ -128,9 +128,9 @@
                             
                             <div class="relative flex-1">
                                 <i class="fa-solid fa-phone absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                                <InputText @bind-Value="_phoneNumber"
-                                           class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
-                                           placeholder="555 000-0000" />
+                                <input type="tel" @bind="_phoneNumber" @bind:event="oninput"
+                                       class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
+                                       placeholder="555 000-0000" />
                             </div>
                         </div>
                         <ValidationMessage For="() => _model.Phone" class="text-xs text-red-500 mt-1 ml-1" />
