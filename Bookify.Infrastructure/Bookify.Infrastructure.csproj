@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.4" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.4" />
     <PackageReference Include="Stripe.net" Version="50.4.1" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.6" />
   </ItemGroup>
 
   <ItemGroup>
