@@ -17,7 +17,7 @@ namespace Bookify.Infrastructure.Repositories
             var query = _db.Services
                 .Include(s => s.Category)
                 .Include(s => s.Staff)
-                .Where(s => !s.IsDeleted)
+                .Where(s => !s.IsDeleted && s.IsActive)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
