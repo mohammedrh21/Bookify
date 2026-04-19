@@ -1,0 +1,249 @@
+@page "/admin/staff/service-details/{Id:guid}"
+@using Bookify.Client.Models.Common
+@using Bookify.Client.Models.Service
+@using Bookify.Client.Models.Booking
+
+<PageTitle>@(_service?.Name ?? "Service Details") — Admin View</PageTitle>
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <button @onclick="NavigateBack" class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary-600 mb-8 transition-colors group">
+        <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+        Back
+    </button>
+
+    @if (_loading)
+    {
+        <div class="flex flex-col items-center justify-center py-20">
+            <div class="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-gray-500 font-medium">Loading service details...</p>
+        </div>
+    }
+    else if (_service == null)
+    {
+        <div class="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+            <div class="text-5xl mb-4">🔍</div>
+            <h2 class="text-2xl font-bold text-gray-900">Service Not Found</h2>
+            <p class="text-gray-500 mt-2 mb-8">This service might have been removed or you don't have permission to view it.</p>
+        </div>
+    }
+    else
+    {
+        @* ═══════════════ HERO BANNER ═══════════════ *@
+        @if (!string.IsNullOrEmpty(_service.ImagePath))
+        {
+            <div class="relative w-full h-72 md:h-96 rounded-3xl overflow-hidden mb-8 shadow-xl">
+                <img src="@_service.ImagePath" class="w-full h-full object-cover" alt="@_service.Name" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+                <div class="absolute top-6 right-6">
+                    <span class="px-4 py-1.5 bg-white/90 backdrop-blur-md text-primary-700 text-xs font-bold rounded-full uppercase tracking-wider shadow-sm">
+                        @_service.CategoryName
+                    </span>
+                </div>
+
+                <div class="absolute bottom-0 left-0 right-0 p-8 md:p-10">
+                    <h1 class="text-3xl md:text-5xl font-extrabold text-white mb-3 drop-shadow-lg">@_service.Name</h1>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div class="flex items-center gap-2 text-amber-400 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-xl">
+                            <i class="fas fa-star text-sm"></i>
+                            <span class="font-bold">@_service.Rating.ToString("F1")</span>
+                            <span class="text-amber-200 text-sm">(@_service.ReviewCount reviews)</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-white bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-xl">
+                            <i class="fas fa-clock text-sm"></i>
+                            <span class="font-bold">@_service.Duration min</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-white bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-xl">
+                            <i class="fas fa-user-tie text-sm"></i>
+                            <span class="font-medium">@_service.StaffName</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            @* ── No-image header ── *@
+            <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 md:p-10 mb-8 relative overflow-hidden">
+                <div class="absolute -top-20 -right-20 w-64 h-64 bg-primary-50 rounded-full opacity-50 pointer-events-none"></div>
+                <div class="absolute top-0 right-0 p-6 z-10">
+                    <span class="px-4 py-1.5 bg-primary-50 text-primary-700 text-xs font-bold rounded-full uppercase tracking-wider">
+                        @_service.CategoryName
+                    </span>
+                </div>
+
+                <h1 class="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4 relative z-10">@_service.Name</h1>
+                <div class="flex items-center gap-3 flex-wrap relative z-10">
+                    <div class="flex items-center gap-2 text-amber-500 bg-amber-50 px-3 py-1.5 rounded-xl">
+                        <i class="fas fa-star text-sm"></i>
+                        <span class="font-bold">@_service.Rating.ToString("F1")</span>
+                        <span class="text-sm text-amber-400 font-medium">(@_service.ReviewCount reviews)</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-primary-600 bg-primary-50 px-3 py-1.5 rounded-xl">
+                        <i class="fas fa-clock text-sm"></i>
+                        <span class="font-bold">@_service.Duration min</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-xl">
+                        <i class="fas fa-user-tie text-sm"></i>
+                        <span class="font-medium">@_service.StaffName</span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* ═══════════════ MAIN GRID ═══════════════ *@
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            @* ── Left Column ── *@
+            <div class="lg:col-span-2 space-y-8">
+
+                @* ── Description Section ── *@
+                @if (!string.IsNullOrWhiteSpace(_service.Description))
+                {
+                    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 bg-primary-50 text-primary-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-align-left"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900">About this Service</h3>
+                        </div>
+                        <div class="text-gray-600 leading-relaxed text-base whitespace-pre-line break-words">
+                            @_service.Description
+                        </div>
+                    </div>
+                }
+
+                @* ── Quick Info Cards ── *@
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center hover:border-primary-200 transition-colors">
+                        <div class="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <p class="text-2xl font-extrabold text-gray-900">$@_service.Price.ToString("F2")</p>
+                        <p class="text-xs text-gray-400 font-medium mt-1">Per Session</p>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center hover:border-primary-200 transition-colors">
+                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <p class="text-2xl font-extrabold text-gray-900">@_service.Duration</p>
+                        <p class="text-xs text-gray-400 font-medium mt-1">Minutes</p>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center hover:border-primary-200 transition-colors">
+                        <div class="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <p class="text-lg font-extrabold text-gray-900">@FormatTime(_service.TimeStart)</p>
+                        <p class="text-xs text-gray-400 font-medium mt-1">Available From</p>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center hover:border-primary-200 transition-colors">
+                        <div class="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-calendar-times"></i>
+                        </div>
+                        <p class="text-lg font-extrabold text-gray-900">@FormatTime(_service.TimeEnd)</p>
+                        <p class="text-xs text-gray-400 font-medium mt-1">Available Until</p>
+                    </div>
+                </div>
+
+                @* ── Service Professional ── *@
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                    <div class="flex items-center gap-5">
+                        @if (!string.IsNullOrEmpty(_service.StaffImagePath))
+                        {
+                            <img src="@_service.StaffImagePath" class="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white ring-2 ring-primary-100 transition-transform hover:scale-105" alt="@_service.StaffName" />
+                        }
+                        else
+                        {
+                            <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-full shadow-md flex items-center justify-center text-white text-xl border-2 border-white ring-2 ring-primary-100">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                        }
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">Service Professional</p>
+                            <h3 class="text-xl font-bold text-gray-900">@_service.StaffName</h3>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-amber-50 text-amber-500 px-4 py-2 rounded-xl">
+                            <i class="fas fa-star text-sm"></i>
+                            <span class="font-bold">@_service.Rating.ToString("F1")</span>
+                        </div>
+                    </div>
+                </div>
+
+                @* ── Reviews Section ── *@
+                <div class="space-y-6">
+                    <div class="flex items-center gap-4">
+                        <h2 class="text-2xl font-bold text-gray-900 whitespace-nowrap">Client Reviews</h2>
+                        <div class="h-px flex-1 bg-gray-200"></div>
+                        @if (_reviews != null && _reviews.Any())
+                        {
+                            <span class="text-sm font-bold text-gray-400">@_reviews.Count total</span>
+                        }
+                    </div>
+
+                    @if (_reviews == null || !_reviews.Any())
+                    {
+                        <div class="p-10 bg-gray-50 rounded-3xl text-center border-2 border-dashed border-gray-200">
+                            <div class="text-4xl mb-3 text-gray-300">⭐</div>
+                            <p class="text-gray-400 font-medium">No reviews yet for this service.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="space-y-4">
+                            @foreach (var review in _reviews)
+                            {
+                                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:border-primary-200 hover:shadow-md">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-gradient-to-br from-primary-400 to-indigo-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm">
+                                                @review.ClientName[0]
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-gray-900">@review.ClientName</h4>
+                                                <p class="text-xs text-gray-400">@review.CreatedAt.ToString("MMM dd, yyyy")</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-sm">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="fas fa-star @(i <= review.Rating ? "text-amber-400" : "text-gray-200")"></i>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(review.Comment))
+                                    {
+                                        <p class="text-gray-600 leading-relaxed break-words">@review.Comment</p>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* ── Right Column: Info Card ── *@
+            <div class="lg:col-span-1">
+                <div class="sticky top-8 space-y-4">
+                    <div class="bg-gradient-to-br from-primary-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-primary-500/20">
+                        <p class="text-primary-100 text-sm font-bold uppercase tracking-widest mb-2">Total Price</p>
+                        <div class="flex items-baseline gap-2 mb-6">
+                            <span class="text-5xl font-black">$@_service.Price.ToString("F2")</span>
+                            <span class="text-primary-200 text-sm">/ session</span>
+                        </div>
+
+                        <div class="space-y-3 mb-8">
+                            <div class="flex items-center gap-3 text-sm bg-white/10 p-3 rounded-2xl">
+                                <i class="fas fa-check-circle text-primary-300"></i>
+                                <span>Active Service Listing</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm bg-white/10 p-3 rounded-2xl">
+                                <i class="fas fa-check-circle text-primary-300"></i>
+                                <span>Visible to Clients</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
