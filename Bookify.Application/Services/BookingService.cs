@@ -398,11 +398,13 @@ namespace Bookify.Application.Services
             _logger.LogInformation("Generating Admin dashboard stats (platform-wide).");
 
             // ── Periods ───────────────────────────────────────────────────────
-            var end      = endDate   ?? DateTime.UtcNow;
-            var start    = startDate ?? end.AddDays(-30);
-            var durationDays = (end.Date - start.Date).TotalDays + 1;
-            var prevStart = start.Date.AddDays(-durationDays);
-            var prevEnd   = start.Date.AddDays(-1);
+            // Normalize to Utc: .Date strips DateTimeKind, so SpecifyKind is required
+            // before passing any DateTime to PostgreSQL 'timestamp with time zone' columns.
+            var end      = UtcDate(endDate   ?? DateTime.UtcNow);
+            var start    = UtcDate(startDate ?? end.AddDays(-30));
+            var durationDays = (end - start).TotalDays + 1;
+            var prevStart = start.AddDays(-durationDays);
+            var prevEnd   = start.AddDays(-1);
 
             // ── Fetch bookings ────────────────────────────────────────────────
             var currentBookings = (await _bookingRepo.GetAdminDashboardBookingsAsync(start, end)).ToList();
@@ -439,7 +441,7 @@ namespace Bookify.Application.Services
             for (int i = 5; i >= 0; i--)
             {
                 var month      = now.AddMonths(-i);
-                var monthStart = new DateTime(month.Year, month.Month, 1);
+                var monthStart = DateTime.SpecifyKind(new DateTime(month.Year, month.Month, 1), DateTimeKind.Utc);
                 var monthEnd   = monthStart.AddMonths(1).AddSeconds(-1);
                 var periodTotal = await _bookingRepo.GetAdminDashboardBookingsAsync(monthStart, monthEnd);
                 stats.BookingTrends.Add(new ChartDataPoint { Label = month.ToString("MMM"), Value = periodTotal.Count() });
@@ -510,12 +512,14 @@ namespace Bookify.Application.Services
                 throw new ForbiddenException("You do not have permission to view this dashboard.");
 
             // ── Periods ───────────────────────────────────────────────────────
-            var end      = endDate   ?? DateTime.UtcNow;
-            var start    = startDate ?? end.AddDays(-30);
-            
-            var durationDays = (end.Date - start.Date).TotalDays + 1;
-            var prevStart = start.Date.AddDays(-durationDays);
-            var prevEnd   = start.Date.AddDays(-1);
+            // Normalize to Utc: .Date strips DateTimeKind, so SpecifyKind is required
+            // before passing any DateTime to PostgreSQL 'timestamp with time zone' columns.
+            var end      = UtcDate(endDate   ?? DateTime.UtcNow);
+            var start    = UtcDate(startDate ?? end.AddDays(-30));
+
+            var durationDays = (end - start).TotalDays + 1;
+            var prevStart = start.AddDays(-durationDays);
+            var prevEnd   = start.AddDays(-1);
 
             // ── Fetch bookings scoped to this staff member ─────────────────────
             var currentBookings = (await _bookingRepo.GetStaffDashboardBookingsAsync(staffId, start, end)).ToList();
@@ -659,6 +663,14 @@ namespace Bookify.Application.Services
 
             return ServiceResponse<StaffDashboardResponse>.Ok(stats);
         }
+
+        /// <summary>
+        /// Returns midnight of the given date with <see cref="DateTimeKind.Utc"/> explicitly set.
+        /// Necessary because <see cref="DateTime.Date"/> always strips the Kind to Unspecified,
+        /// which Npgsql 6+ rejects for 'timestamp with time zone' columns.
+        /// </summary>
+        private static DateTime UtcDate(DateTime dt) =>
+            DateTime.SpecifyKind(dt.Date, DateTimeKind.Utc);
 
         private double CalculateTrend(double current, double previous)
         {

@@ -15,6 +15,13 @@ using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.HttpOverrides;
 
+// ============================
+// PostgreSQL DateTime Compatibility
+// Allow DateTime with Kind=Unspecified to be written to 'timestamp with time zone' columns.
+// Npgsql 6+ enforces UTC-only by default; this switch restores the pre-v6 behavior.
+// ============================
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================

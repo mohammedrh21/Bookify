@@ -92,13 +92,13 @@ namespace Bookify.Infrastructure.Repositories
 
             if (from.HasValue)
             {
-                var fromDate = from.Value.Date;
+                var fromDate = DateTime.SpecifyKind(from.Value.Date, DateTimeKind.Utc);
                 query = query.Where(b => b.Date >= fromDate);
             }
 
             if (to.HasValue)
             {
-                var toDate = to.Value.Date.AddDays(1).AddTicks(-1);
+                var toDate = DateTime.SpecifyKind(to.Value.Date, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
                 query = query.Where(b => b.Date <= toDate);
             }
 
@@ -117,15 +117,19 @@ namespace Bookify.Infrastructure.Repositories
         }
 
         public async Task<IEnumerable<Booking>> GetByServiceIdAsync(Guid serviceId, DateTime from, DateTime to)
-            => await _db.Bookings
-                .Where(b => b.ServiceId == serviceId && b.Date >= from && b.Date <= to && b.Status != BookingStatus.Cancelled)
+        {
+            var fromUtc = DateTime.SpecifyKind(from.Date, DateTimeKind.Utc);
+            var toUtc   = DateTime.SpecifyKind(to.Date, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
+            return await _db.Bookings
+                .Where(b => b.ServiceId == serviceId && b.Date >= fromUtc && b.Date <= toUtc && b.Status != BookingStatus.Cancelled)
                 .AsNoTracking()
                 .ToListAsync();
+        }
 
         public async Task<IEnumerable<Booking>> GetStaffDashboardBookingsAsync(Guid staffId, DateTime from, DateTime to)
         {
-            var fromDate = from.Date;
-            var toDate = to.Date.AddDays(1).AddTicks(-1);
+            var fromDate = DateTime.SpecifyKind(from.Date, DateTimeKind.Utc);
+            var toDate   = DateTime.SpecifyKind(to.Date, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
 
             return await _db.Bookings
                 .Include(b => b.Service)
@@ -133,7 +137,7 @@ namespace Bookify.Infrastructure.Repositories
                 .Include(b => b.Client)
                 .Include(b => b.Payment)
                 .Include(b => b.Review)
-                .Where(b => b.Service.StaffId == staffId && b.Date.Date >= fromDate && b.Date.Date <= toDate)
+                .Where(b => b.Service.StaffId == staffId && b.Date >= fromDate && b.Date <= toDate)
                 .OrderByDescending(b => b.Date).ThenByDescending(b => b.Time)
                 .AsNoTracking()
                 .ToListAsync();
@@ -153,13 +157,13 @@ namespace Bookify.Infrastructure.Repositories
 
             if (from.HasValue)
             {
-                var fromDate = from.Value.Date;
+                var fromDate = DateTime.SpecifyKind(from.Value.Date, DateTimeKind.Utc);
                 query = query.Where(b => b.Date >= fromDate);
             }
-            
+
             if (to.HasValue)
             {
-                var toDate = to.Value.Date.AddDays(1).AddTicks(-1);
+                var toDate = DateTime.SpecifyKind(to.Value.Date, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
                 query = query.Where(b => b.Date <= toDate);
             }
 
@@ -191,13 +195,13 @@ namespace Bookify.Infrastructure.Repositories
 
             if (from.HasValue)
             {
-                var fromDate = from.Value.Date;
+                var fromDate = DateTime.SpecifyKind(from.Value.Date, DateTimeKind.Utc);
                 query = query.Where(b => b.Date >= fromDate);
             }
 
             if (to.HasValue)
             {
-                var toDate = to.Value.Date.AddDays(1).AddTicks(-1);
+                var toDate = DateTime.SpecifyKind(to.Value.Date, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
                 query = query.Where(b => b.Date <= toDate);
             }
 
@@ -246,13 +250,13 @@ namespace Bookify.Infrastructure.Repositories
 
             if (from.HasValue)
             {
-                var fromDate = from.Value.Date;
+                var fromDate = DateTime.SpecifyKind(from.Value.Date, DateTimeKind.Utc);
                 query = query.Where(b => b.Date >= fromDate);
             }
 
             if (to.HasValue)
             {
-                var toDate = to.Value.Date.AddDays(1).AddTicks(-1);
+                var toDate = DateTime.SpecifyKind(to.Value.Date, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
                 query = query.Where(b => b.Date <= toDate);
             }
 
