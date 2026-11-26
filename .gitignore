@@ -361,3 +361,10 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Secrets and local configuration (never commit real values)
+.env
+.env.*
+!.env.example
+Bookify.API/appsettings.json
+Bookify.API/appsettings.Development.json
